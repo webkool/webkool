@@ -1,0 +1,574 @@
+var __extends = this.__extends || function (d, b) {
+    for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
+    function __() { this.constructor = d; }
+    __.prototype = b.prototype;
+    d.prototype = new __();
+};
+var Webkool;
+(function (Webkool) {
+    'use strict';
+
+    /*
+    ** Template and Css Engine
+    */
+    var templateEngine = {
+        'square': require('../lib/square'),
+        'mustache': require('../lib/mustache')
+    };
+
+    var styleSheetEngine = {
+        'css': '',
+        'less': require('../lib/less'),
+        'sass': require('../lib/sass')
+    };
+
+    /*
+    **	require
+    */
+    var expat = require('node-expat');
+    var fs = require('fs');
+
+    console.log(__dirname + '../lib/client/');
+
+    var outputJS, outputCSS, options = {
+        client: false,
+        server: false,
+        target: {},
+        includes: [__dirname + '/../lib/client/'],
+        inputs: [],
+        output: ''
+    };
+
+    /*
+    **	Nodes
+    */
+    var Element = (function () {
+        function Element(parser, name, attrs) {
+            this.start(parser, name, attrs);
+        }
+        Element.prototype.start = function (parser, name, attrs) {
+            if (parser.currentElement) {
+                parser.currentElement.processText(parser);
+                parser.currentElement.children.push(this);
+            }
+            this.parent = parser.currentElement;
+            this.children = [];
+            this.name = name;
+            this.attrs = attrs;
+            this.text = '';
+            parser.currentElement = this;
+        };
+
+        Element.prototype.stop = function (parser, name) {
+            this.processText(parser);
+            parser.currentElement = this.parent;
+        };
+
+        Element.prototype.prepare = function (parser) {
+            this.children.forEach(function (item) {
+                item.prepare(parser);
+            });
+        };
+
+        Element.prototype.processElement = function (parser, name, attrs) {
+            if (this.elementRules.hasOwnProperty(name))
+                return new (this.elementRules[name])(parser, name, attrs);
+            parser.error('Element not found <' + name + '>');
+        };
+
+        Element.prototype.processText = function (parser) {
+            this.text += parser.currentText;
+            parser.currentText = '';
+        };
+
+        Element.prototype.print = function (js, css) {
+            this.printHeader(js, css);
+            this.printBody(js, css);
+            this.printFooter(js, css);
+        };
+
+        Element.prototype.printHeader = function (js, css) {
+            return;
+        };
+
+        Element.prototype.printBody = function (js, css) {
+            this.children.forEach(function (item) {
+                item.print(js, css);
+            });
+        };
+
+        Element.prototype.printFooter = function (js, css) {
+            return;
+        };
+        return Element;
+    })();
+
+    var Include = (function (_super) {
+        __extends(Include, _super);
+        function Include(parser, name, attrs) {
+            _super.call(this, parser, name, attrs);
+            this.elementRules = {};
+            this.name = 'include';
+            this.parser = parser;
+        }
+        Include.prototype.prepare = function (parser) {
+            var element = this;
+            var filename = getPath(this.attrs.href), filestream;
+
+            if (!filename) {
+                console.log('// include ' + this.attrs.href + ' not found!');
+            } else {
+                if (filename.substring(filename.length - 3) === '.js') {
+                    console.log('# including ' + this.attrs.href);
+                    parser.wait(this);
+                    fs.readFile(filename, function (err, data) {
+                        element.js = data;
+                        parser.dequeue(element);
+                    });
+                } else if (filename.substring(filename.length - 4) === '.css') {
+                    console.log('# including ' + this.attrs.href);
+                    parser.wait(this);
+                    fs.readFile(filename, function (err, data) {
+                        element.css = data;
+                        parser.dequeue(element);
+                    });
+                } else if (filename.substring(filename.length - 3) === '.wk') {
+                    parser.wait(this);
+                    doParseDocument(filename, function (js, css) {
+                        element.js = js;
+                        element.css = css;
+                        parser.dequeue(element);
+                    });
+                } else {
+                    console.log('// include ' + this.attrs.href + ' extension not found!');
+                }
+            }
+        };
+
+        Include.prototype.printBody = function (js, css) {
+            if (this.attrs.href.substring(this.attrs.href.length - 3) === '.js') {
+                js.write('// include ' + this.attrs.href + '\n');
+                js.write(this.js);
+            } else if (this.attrs.href.substring(this.attrs.href.length - 4) === '.css') {
+                css.write('/* include ' + this.attrs.href + '*/\n');
+                css.write(this.css);
+            } else if (this.attrs.href.substring(this.attrs.href.length - 3) === '.wk') {
+                js.write('// include ' + this.attrs.href + '\n');
+                js.write(this.js);
+                css.write('/* include ' + this.attrs.href + '*/\n');
+                css.write(this.css);
+            }
+        };
+        return Include;
+    })(Element);
+
+    var On = (function (_super) {
+        __extends(On, _super);
+        function On(parser, name, attrs) {
+            _super.call(this, parser, name, attrs);
+            this.elementRules = {};
+            this.name = 'on';
+        }
+        On.prototype.printBody = function (js, css) {
+            js.write('on_');
+            js.write(this.attrs.id);
+            js.write(': { value: function(context, model, query, result) {');
+            js.write(this.text);
+            js.write('}},\n');
+        };
+        return On;
+    })(Element);
+
+    var Property = (function (_super) {
+        __extends(Property, _super);
+        function Property(parser, name, attrs) {
+            _super.call(this, parser, name, attrs);
+            this.elementRules = {};
+            this.name = 'property';
+        }
+        Property.prototype.printBody = function (js, css) {
+            if (!this.attrs.hasOwnProperty('id')) {
+                throw new Error('properties must have an id!');
+            }
+            js.write('application.addProperty(\"');
+            js.write(this.attrs.id);
+            js.write('\", \"');
+            js.write(this.text);
+            js.write('\");\n');
+        };
+        return Property;
+    })(Element);
+
+    var Script = (function (_super) {
+        __extends(Script, _super);
+        function Script(parser, name, attrs) {
+            _super.call(this, parser, name, attrs);
+            this.elementRules = {};
+            this.name = 'script';
+        }
+        Script.prototype.printBody = function (js, css) {
+            js.write(this.text);
+            js.write('\n');
+        };
+        return Script;
+    })(Element);
+
+    var Stylesheet = (function (_super) {
+        __extends(Stylesheet, _super);
+        function Stylesheet(parser, name, attrs) {
+            _super.call(this, parser, name, attrs);
+            this.elementRules = {};
+            this.name = 'stylesheet';
+            this.type = 'css';
+            if (this.attrs.hasOwnProperty('type') && styleSheetEngine.hasOwnProperty(this.attrs.type))
+                this.type = this.attrs.type;
+        }
+        Stylesheet.prototype.print = function (js, css) {
+            if (this.type != 'css')
+                styleSheetEngine[this.type].compile(this.text, css);
+else
+                css.write(this.text);
+        };
+        return Stylesheet;
+    })(Element);
+
+    var Template = (function (_super) {
+        __extends(Template, _super);
+        function Template(parser, name, attrs) {
+            _super.call(this, parser, name, attrs);
+            this.elementRules = {};
+            this.name = 'template';
+            this.templateName = 'square';
+            if (this.attrs.hasOwnProperty('system') && templateEngine.hasOwnProperty(this.attrs.system))
+                this.templateName = this.attrs.system;
+        }
+        Template.prototype.printHeader = function (js, css) {
+            if (this.attrs.hasOwnProperty('id')) {
+                if (Handler.prototype.isPrototypeOf(this.parent))
+                    throw new Error('Embedded templates have no id!');
+                js.write('application.addTemplate(\"');
+                js.write(this.attrs.id);
+                js.write('\", Object.create(Template.prototype, {\n');
+            } else {
+                if (!Handler.prototype.isPrototypeOf(this.parent))
+                    throw new Error('Stand-alone templates must have an id!');
+            }
+        };
+
+        Template.prototype.printBody = function (js, css) {
+            js.write('on_render');
+            js.write(': { value:\n');
+
+            var string = this.text.replace(/\s+/g, ' '), buffer, templateCompiler;
+            string = string.replace(/\"/g, '\\\"');
+            buffer = new Buffer(string);
+            templateCompiler = new templateEngine[this.templateName].parse(buffer);
+            templateCompiler.print(js, '');
+            js.write('},\n');
+        };
+
+        Template.prototype.printFooter = function (js, css) {
+            if (this.attrs.hasOwnProperty('id')) {
+                js.write('\n}));\n\n');
+            }
+        };
+        return Template;
+    })(Element);
+
+    var Client = (function (_super) {
+        __extends(Client, _super);
+        function Client(parser, name, attrs) {
+            _super.call(this, parser, name, attrs);
+            this.elementRules = {
+                handler: Handler,
+                include: Include,
+                on: On,
+                property: Property,
+                script: Script,
+                stylesheet: Stylesheet,
+                template: Template
+            };
+            this.name = 'client';
+        }
+        Client.prototype.print = function (js, css) {
+            if (options.client) {
+                var flag = true;
+                if (this.attrs.hasOwnProperty('target')) {
+                    /*
+                    with (options.target) {
+                    flag = this.attrs.target;
+                    }
+                    */
+                    return;
+                }
+                if (flag)
+                    Element.prototype.print.call(this, js, css);
+            }
+        };
+        return Client;
+    })(Element);
+
+    var Handler = (function (_super) {
+        __extends(Handler, _super);
+        function Handler(parser, name, attrs) {
+            _super.call(this, parser, name, attrs);
+            this.elementRules = {
+                on: On,
+                bind: Bind,
+                template: Template
+            };
+            this.name = 'handler';
+        }
+        Handler.prototype.printHeader = function (js, css) {
+            js.write('application.addHandler(\"');
+            js.write(this.attrs.url);
+            js.write('\", Object.create(Handler.prototype, {\n');
+            js.write('url : { value: \"');
+            js.write(this.attrs.url);
+            js.write('\"},\n');
+            if (this.attrs.type) {
+                js.write('contentType : { value: \"');
+                js.write(this.attrs.type);
+                js.write('\"},\n');
+            }
+        };
+
+        Handler.prototype.printFooter = function (js, css) {
+            js.write('\n}));\n\n');
+        };
+        return Handler;
+    })(Element);
+
+    var Bind = (function (_super) {
+        __extends(Bind, _super);
+        function Bind(parser, name, attrs) {
+            _super.call(this, parser, name, attrs);
+            this.elementRules = {};
+            this.name = 'bind';
+        }
+        Bind.prototype.printBody = function (js, css) {
+            js.write('application.addObserver(' + this.attrs.data + ', ' + this.attrs.with + ');\n');
+        };
+        return Bind;
+    })(Element);
+
+    var Server = (function (_super) {
+        __extends(Server, _super);
+        function Server(parser, name, attrs) {
+            _super.call(this, parser, name, attrs);
+            this.elementRules = {
+                handler: Handler,
+                include: Include,
+                on: On,
+                property: Property,
+                script: Script,
+                stylesheet: Stylesheet,
+                template: Template
+            };
+            this.name = 'server';
+        }
+        Server.prototype.print = function (js, css) {
+            if (options.server) {
+                var flag = true;
+                if (this.attrs.hasOwnProperty('target')) {
+                    /*
+                    with (options.target) {
+                    flag = this.attrs.target;
+                    }
+                    */
+                    return;
+                }
+                if (flag)
+                    Element.prototype.print.call(this, js, css);
+            }
+        };
+        return Server;
+    })(Element);
+
+    var Application = (function (_super) {
+        __extends(Application, _super);
+        function Application(parser, name, attrs) {
+            _super.call(this, parser, name, attrs);
+            this.elementRules = {
+                client: Client,
+                handler: Handler,
+                include: Include,
+                property: Property,
+                server: Server,
+                script: Script,
+                stylesheet: Stylesheet,
+                template: Template
+            };
+            this.name = 'application';
+        }
+        return Application;
+    })(Element);
+
+    var Roots = (function (_super) {
+        __extends(Roots, _super);
+        function Roots(parser, name, attrs) {
+            _super.call(this, parser, name, attrs);
+            this.elementRules = {
+                application: Application
+            };
+            this.name = 'roots';
+        }
+        return Roots;
+    })(Element);
+
+    var StreamBuffer = (function () {
+        function StreamBuffer() {
+            this.buffers = [];
+        }
+        StreamBuffer.prototype.write = function (data) {
+            if (data) {
+                if (typeof data === "string")
+                    this.buffers.push(new Buffer(data));
+else
+                    this.buffers.push(data);
+            }
+        };
+
+        StreamBuffer.prototype.toString = function () {
+            if (this.buffers.length) {
+                return Buffer.concat(this.buffers);
+            } else {
+                return "";
+            }
+        };
+        return StreamBuffer;
+    })();
+
+    function doParseArguments(options) {
+        var args = process.argv, c = args.length, i;
+        for (i = 2; i < c; i += 1) {
+            switch (args[i]) {
+                case '-client':
+                    options.client = true;
+                    options.server = false;
+                    break;
+                case '-server':
+                    options.client = false;
+                    options.server = true;
+                    break;
+                case '-target':
+                    i += 1;
+                    options.target[args[i]] = true;
+                    break;
+                case '-i':
+                    i += 1;
+                    options.includes.push(args[i]);
+                    break;
+                case '-o':
+                    i += 1;
+                    options.output = args[i];
+                    break;
+                default:
+                    options.inputs.push(args[i]);
+                    break;
+            }
+        }
+    }
+
+    //historique:  a
+    function doNextDocument() {
+        if (options.inputs.length) {
+            doParseDocument(options.inputs.shift(), doNextDocument);
+        }
+    }
+
+    function doParseDocument(filename, callback) {
+        var parser = new expat.Parser('UTF-8');
+        parser.currentElement = null;
+        parser.currentText = '';
+
+        parser.roots = new Roots(parser, 'roots', null);
+
+        parser.filename = filename;
+        parser.elements = [parser];
+        parser.wait = function (element) {
+            this.elements.push(element);
+        };
+        parser.dequeue = function (element) {
+            var index = this.elements.indexOf(element);
+            if (index < 0)
+                console.log('>>>> DEQUEUE UNKNOWN ELEMENT');
+            this.elements.splice(index, 1);
+            if (this.elements.length == 0) {
+                var js = new StreamBuffer();
+                var css = new StreamBuffer();
+                this.currentElement.print(js, css);
+                if (callback)
+                    callback(js.toString(), css.toString());
+            }
+        };
+        parser.error = function (e) {
+            console.log(parser.filename + ':' + parser.getCurrentLineNumber() + ': error:' + e);
+        };
+        parser.addListener('error', function (e) {
+            console.log(parser.filename + ':' + parser.getCurrentLineNumber() + ': error:' + e);
+        });
+        parser.addListener('startElement', function (name, attrs) {
+            this.currentElement.processElement(parser, name, attrs);
+        });
+        parser.addListener('endElement', function (name) {
+            this.currentElement.stop(parser, name);
+        });
+        parser.addListener('text', function (s) {
+            this.currentText += s;
+        });
+        parser.addListener('end', function () {
+            this.currentElement.prepare(parser);
+            parser.dequeue(parser);
+        });
+        console.log('# parsing ' + parser.filename);
+        parser.input = fs.createReadStream(parser.filename);
+        parser.input.pipe(parser);
+    }
+
+    function getPath(filename) {
+        var i, c = options.includes.length, path, folder;
+        for (i = 0; i < c; i += 1) {
+            folder = options.includes[i];
+            try  {
+                path = makePath(folder, filename);
+                if (path) {
+                    return path;
+                }
+            } catch (unused) {
+                continue;
+            }
+        }
+    }
+
+    function makePath(rootpath, filename) {
+        var length = rootpath.length, path = filename;
+        if (length) {
+            if (rootpath.charAt(length - 1) != '/') {
+                path = rootpath + '/' + filename;
+            } else {
+                path = rootpath + filename;
+            }
+        }
+        return fs.realpathSync(path);
+    }
+
+    function run() {
+        doParseArguments(options);
+
+        doParseDocument(options.inputs.shift(), function (js, css) {
+            var jsStream = fs.createWriteStream(options.output + '.js');
+            if (options.server == true)
+                js += '\napplication.start()\n';
+            jsStream.write(js);
+
+            if (options.client) {
+                var cssStream = fs.createWriteStream(options.output + '.css');
+                cssStream.write(css);
+            }
+        });
+    }
+    Webkool.run = run;
+})(Webkool || (Webkool = {}));
+
+Webkool.run();

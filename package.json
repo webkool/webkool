@@ -1,0 +1,48 @@
+{
+  "name": "webkool",  
+  "description": "open-source platform to develop client and/or server web application and API.",
+  "keywords": [
+    "client",
+    "server",
+    "application",
+    "plateform",
+    "xml",
+    "api"
+  ],
+
+  "version": "0.1.0",
+  "preferGlobal": true,
+
+  "license":  "Apache License 2.0",
+
+  "author": "haruni.net",
+  "contributors": [ 
+    {
+      "name": "Sebastien Burel",
+      "email": "sb@haruni.net"
+    },
+    {
+      "name":   "Harold Ozouf",
+      "email":  "harold.ozouf@epitech.eu"
+    }
+  ],
+
+  "main": "./lib/webkool",
+
+  "bin": {
+    "wkc": "./bin/wkc"
+  },
+
+  "dependencies": {
+    "less":       "*",
+    "hogan.js":   "*",
+    "mysql":      "*",
+    "node-sass":  "*",
+    "formidable": "*",
+    "node-expat": "*"
+  },
+  
+  "engines": {
+    "node": "*"
+  }
+}
