@@ -46,7 +46,7 @@ module Webkool {
 			target: {},
 			includes: [__dirname + '/../lib/client/', './'],
 			inputs: [],
-			output: '',
+			output: 'untitled',
 		};
 
 	/*
@@ -589,20 +589,38 @@ module Webkool {
 		return fs.realpathSync(path);
 	}
 
+	function checkWebKoolWkFileExistence() {
+		try {
+			var path = fs.realpathSync('./.webkool.wk');
+			console.log(path);
+		} catch (e) {
+			var data = fs.readFileSync(__dirname + '/../sources/templates/webkool.wk');
+			fs.writeFileSync('./.webkool.wk', data);
+		}
+	}
+
 	export function run() {
 		doParseArguments(options);
 
-		doParseDocument(options.inputs.shift(),
-			function (js, css) {
-				var jsStream = fs.createWriteStream(options.output + '.js');
-				if (options.server == true)
-					js += '\napplication.start()\n';
-				jsStream.write(js);
+		checkWebKoolWkFileExistence();
 
-				if (options.client) {
-					var cssStream = fs.createWriteStream(options.output + '.css');
-					cssStream.write(css);
-				}
+		doParseDocument('.webkool.wk', function (initialJs, initialCss) {
+			var name = options.output + ((options.server) ? ('.server') : ('.client'));
+			var jsStream = fs.createWriteStream(name + '.js');
+			if (options.client) {
+				var cssStream = fs.createWriteStream(name + '.css');
+				cssStream.write(initialCss)
+			}
+			jsStream.write(initialJs);
+			
+			doParseDocument(options.inputs.shift(),
+				function (js, css) {
+					jsStream.write(js);
+					if (options.server == true)
+						jsStream.write('\napplication.start()\n');
+					if (options.client)
+						cssStream.write(css)
+			});
 		});
 	}
 }

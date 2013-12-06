@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <application xmlns="http://www.webkool.net/1.0/">
-	<include href="webkool.wk" />
+
 	<property id="name">test</property>
 	<property id="port">4242</property>
 	<client>
@@ -10,20 +10,44 @@
 		<handler url="/" type="text/html">
 			<template system="square">
 				<![CDATA[
-					<h1>BASIC PAGE</h1>
+					#{include("/header")}#
+						<h1>BASIC PAGE</h1>
+					#{include("/footer")}#
 				]]>
 			</template>
 		</handler>
 
-		<stylesheet type="css">
-			<![CDATA[
-				h1 {
-					background: 	#414141;
-					color: 			white;
-				}
-			]]>
-		</stylesheet>
-	</server>
-
+		<handler url="/basic.client.css" type="text/css">
+			<on id="render">
+				var css = require('fs').readFileSync('basic.client.css');
+				return (css.toString());
+			</on>
+		</handler>
 	
+	</server>
+	<template id="/header" system="square">
+		<![CDATA[
+			<html>
+				<head>
+					<title>Basic</title>
+					<link href="basic.client.css" rel="stylesheet" type="text/css" />
+				</head>
+				<body>
+		]]>
+	</template>
+	<template id="/footer" system="square">
+		<![CDATA[
+				</body>
+			</html>
+		]]>
+	</template>
+
+	<stylesheet type="css">
+		<![CDATA[
+			h1 {
+				background: 	#414141;
+				color: 			white;
+			}
+		]]>
+	</stylesheet>
 </application>

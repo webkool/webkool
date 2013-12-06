@@ -60,5 +60,3 @@ chmod +x ${COMPILER_PACKAGE_BIN}${BIN}
 
 echo "compiling ${COMPILER_SOURCES}${ELM}.ts"
 
-tree ${COMPILER_PACKAGE}
-
