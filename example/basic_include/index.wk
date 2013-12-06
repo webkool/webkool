@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<application xmlns="http://www.webkool.net/1.0/">
+	<include href="webkool.wk" />
+	<property id="name">test</property>
+	<property id="port">4242</property>
+	<client>
+	</client>
+	<server>
+
+		<handler url="/" type="text/html">
+			<template system="square">
+				<![CDATA[
+					#{include("/header")}#
+					<h1>BASIC PAGE #pc#</h1>
+					#{include("/footer")}#
+				]]>
+			</template>
+		</handler>
+
+
+		<template id="/header" system="square">
+			<![CDATA[
+				<html>
+					<head>
+						<title>basic page</title>
+					</head>
+					<body>
+			]]>
+		</template>
+		<template id="/footer" system="square">
+			<![CDATA[
+					</body>
+				</html>
+			]]>
+		</template>
+	</server>
+</application>

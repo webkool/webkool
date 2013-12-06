@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<application xmlns="http://www.webkool.net/1.0/">
+	<client>
+		<include href='webkool.js' />
+		<include href='square_lib.js' />
+		<include href='hogan-2.0.0.js' />
+		<script>
+		var application = new Application();
+		</script>
+	</client>
+	<server>
+		<include href='webkool.js' />
+		<script>
+			var application = new Server();
+		</script>
+	</server>
+</application>

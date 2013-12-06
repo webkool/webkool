@@ -33,7 +33,7 @@ echo "[SERVER LIB] .ts compiling"
 for ELM in ${SOURCES[*]}
 do
 	tsc --target ES5 --outDir ${COMPILER_TMP}  ${COMPILER_SOURCES}${ELM}'.ts'
-	tr -d '\r' < ${COMPILER_TMP}${ELM}'.js' >> ${COMPILER_PACKAGE_LIB}${ELM}'.js'
+	tr -d '\r' < ${COMPILER_TMP}${ELM}'.js' > ${COMPILER_PACKAGE_LIB}${ELM}'.js'
     echo "compiling ${COMPILER_SOURCES}${ELM}.ts"
 done
 
@@ -42,7 +42,7 @@ mkdir ${COMPILER_PACKAGE_LIB_CLIENT}
 echo "[CLIENT LIB] .js moving"
 
 tsc --target ES5 --outDir ${COMPILER_TMP}  ${COMPILER_SOURCES}${CLIENT_LIB_SRC}'.ts'
-tr -d '\r' < ${COMPILER_TMP}${CLIENT_LIB_SRC}'.js' >> ${COMPILER_PACKAGE_LIB_CLIENT}${CLIENT_LIB_SRC}'.js'
+tr -d '\r' < ${COMPILER_TMP}${CLIENT_LIB_SRC}'.js' > ${COMPILER_PACKAGE_LIB_CLIENT}${CLIENT_LIB_SRC}'.js'
 echo "compiling ${COMPILER_SOURCES_CLIENT}${CLIENT_LIB_SRC}.ts"
 
 for ELM in ${CLIENT_LIB[*]}
