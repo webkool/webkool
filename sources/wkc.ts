@@ -46,7 +46,7 @@ module Webkool {
 			client: false,
 			server: false,
 			target: {},
-			includes: [__dirname + '/../lib/client/'],
+			includes: [__dirname + '/../lib/client/', './'],
 			inputs: [],
 			output: '',
 		};
