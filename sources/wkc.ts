@@ -38,8 +38,6 @@ module Webkool {
 	var expat = require('node-expat');
 	var fs = require('fs');
 	
-	console.log(__dirname + '../lib/client/');
-	
 	var outputJS,
 		outputCSS,
 		options = {
@@ -475,35 +473,36 @@ module Webkool {
 	}
 
 	function doParseArguments (options) {
-		var args = process.argv, c = args.length, i;
-		for (i = 2; i < c; i += 1) {
-			switch (args[i]) {
-			case '-client':
-				options.client = true;
-				options.server = false;
-				break;
-			case '-server':
-				options.client = false;
-				options.server = true;
-				break;
-			case '-target':
-				i += 1;
-				options.target[args[i]] = true;
-				break;
-			case '-i':
-				i += 1;
-				options.includes.push(args[i]);
-				break;
-			case '-o':
-				i += 1;
-				options.output = args[i];
-				break;
-			default:
-				options.inputs.push(args[i]);
-				break;
-			}
+		var argv = require('optimist')
+				.alias('c', 'client')
+				.alias('s', 'server')
+				.boolean(['server', 'client'])
+				.string('o', 'i')
+				.describe('c', 'compile for client')
+				.describe('s', 'compile for server')
+				.describe('i', 'include directory')
+				.describe('o', 'output basename')
+				.usage('$0')
+				.demand('_')
+				.argv;
+
+		options.server = argv.server;
+		options.client = argv.client;
+
+		if (argv.i) {
+			if (argv.i instanceof Array)
+				argv.i.forEach(function (elm) { options.includes.push(elm)});
+			else
+				options.includes.push(argv.i);
 		}
+
+		if (argv.o)
+			options.output = (argv.o instanceof Array) ? (argv.o.splice(-1)) : (argv.o);
+
+		argv._.forEach(function (elm) { options.inputs.push(elm) });
 	}
+
+
 //historique:  a 
 	function doNextDocument() {
 		
