@@ -1,7 +1,7 @@
 declare var exports;
 declare var Buffer;
 declare var encodeHTML;
-	
+
 module Square {
 	'use strict';
 
@@ -13,7 +13,7 @@ module Square {
 			this.container = container;
 			this.contents = [];
 		}
-		
+
 		prepare(buffer) {
 			var contents = this.contents, c = contents.length, i;
 			for (i = 0; i < c; i += 1) {
@@ -44,7 +44,7 @@ module Square {
 			this.start = offset;
 			this.stop = offset;
 		}
-		
+
 		prepare(buffer) {
 			this.buffer = buffer.toString(null, this.start, this.stop);
 		}
@@ -76,7 +76,7 @@ module Square {
 			this.line = line;
 			this.contents = [];
 		}
-		
+
 		prepare(buffer) {
 			this.script = buffer.toString(null, this.start, this.stop);
 			this.script = this.script.replace(/\\"/g, '"');
@@ -113,7 +113,7 @@ module Square {
 				case 3:
 					blocks[0].print(stream, carriageReturn);
 					carriageReturn(stream, 0);
-				
+
 					stream.write(this.script);
 					stream.write('.forEach(function ($, $i, $$) {');
 					carriageReturn(stream, 1);
@@ -184,7 +184,7 @@ module Square {
 								c = buffer[offset];
 								if (c === 10)
 									offset += 1;
-							}					
+							}
 							else if (c === 125) // }
 								break;
 							else
@@ -214,7 +214,7 @@ module Square {
 						}
 						offset += 1;
 						this.startText(offset);
-					}			
+					}
 					else if (c === 91) { // [
 						this.stopText(former);
 						if (start === stop)
@@ -238,7 +238,7 @@ module Square {
 						offset += 1;
 						this.startText(offset);
 					}
-					else if (c === 91) { // 91
+					else if (c === 91) { // [
 						this.stopText(former);
 						this.popBlock();
 						this.pushBlock();
@@ -273,7 +273,7 @@ module Square {
 							this.line += 1;
 							offset += 1;
 							break;
-						case 13:	
+						case 13:
 							this.line += 1;
 							offset += 1;
 							c = buffer[offset];
@@ -289,9 +289,9 @@ module Square {
 				default:
 					offset += 1;
 					break;
-		
+
 				}
-			}	
+			}
 			this.stopText(offset);
 		}
 
@@ -350,7 +350,7 @@ module Square {
 
 		print(stream) {
 			var contents = this.contents, c = contents.length, i, tab = 0;
-			
+
 			function carriageReturn (stream, delta) {
 				stream.write("\n");
 				tab += delta;
@@ -359,7 +359,7 @@ module Square {
 					stream.write("\t");
 					c--;
 				}
-			} 
+			}
 			carriageReturn(stream, 1);
 			stream.write('function (context, model) {');
 			//

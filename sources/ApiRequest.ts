@@ -24,6 +24,7 @@ module ApiRequest {
 							throw new Error('Could not reach Server');
 						}
 						else if (this.status) {
+							context.responseText = this.responseText;
 							throw new Error('Server error ('+this.status+')');
 						}
 						spinningOff();
