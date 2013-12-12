@@ -41,12 +41,12 @@ module Webkool {
 	var outputJS,
 		outputCSS,
 		options = {
-			client: false,
-			server: false,
-			target: {},
-			includes: [__dirname + '/../lib/client/', './'],
-			inputs: [],
-			output: 'untitled',
+			client:		false,
+			server: 	false,
+			target: 	{},
+			includes: 	[__dirname + '/../lib/client/', './'],
+			inputs: 	[],
+			output: 	'untitled',
 		};
 
 	/*
@@ -386,13 +386,13 @@ module Webkool {
 
 	class Server extends Element {
 		elementRules = {
-			handler: Handler,
-			include: Include,
-			on: On,
-			property: Property,
-			script: Script,
+			handler:	Handler,
+			include:	Include,
+			on:			On,
+			property:	Property,
+			script: 	Script,
 			stylesheet: Stylesheet,
-			template: Template,
+			template: 	Template,
 		};
 		name = 'server';
 
@@ -419,14 +419,14 @@ module Webkool {
 
 	class Application extends Element {
 		elementRules = {
-			client: Client,
-			handler: Handler,
-			include: Include,
-			property: Property,
-			server: Server,
-			script: Script,
+			client: 	Client,
+			handler: 	Handler,
+			include: 	Include,
+			property: 	Property,
+			server: 	Server,
+			script: 	Script,
 			stylesheet: Stylesheet,
-			template: Template,
+			template: 	Template,
 		};
 		name = 'application';
 
