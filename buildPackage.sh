@@ -14,16 +14,16 @@ COMPILER_TMP=${COMPILER_PACKAGE}'sources/tmp/'
 CLIENT_LIB[0]='hogan-2.0.0.js'
 CLIENT_LIB[1]='square_lib.js'
 
-CLIENT_LIB_SRC='webkool'
 
+CLIENT_LIB_SRC[0]='webkool'
+CLIENT_LIB_SRC[1]='ApiRequest'
 
-SOURCES[0]='ApiRequest'
-SOURCES[1]='MySQL'
-SOURCES[2]='compass'
-SOURCES[3]='less'
-SOURCES[4]='mustache'
-SOURCES[5]='sass'
-SOURCES[6]='square'
+SOURCES[0]='MySQL'
+SOURCES[1]='compass'
+SOURCES[2]='less'
+SOURCES[3]='mustache'
+SOURCES[4]='sass'
+SOURCES[5]='square'
 
 BIN='wkc'
 
@@ -41,9 +41,13 @@ mkdir ${COMPILER_PACKAGE_LIB_CLIENT}
 
 echo "[CLIENT LIB] .js moving"
 
-tsc --target ES5 --outDir ${COMPILER_TMP}  ${COMPILER_SOURCES}${CLIENT_LIB_SRC}'.ts'
-tr -d '\r' < ${COMPILER_TMP}${CLIENT_LIB_SRC}'.js' > ${COMPILER_PACKAGE_LIB_CLIENT}${CLIENT_LIB_SRC}'.js'
-echo "compiling ${COMPILER_SOURCES_CLIENT}${CLIENT_LIB_SRC}.ts"
+for ELM in ${CLIENT_LIB_SRC[*]}
+do
+	tsc --target ES5 --outDir ${COMPILER_TMP}  ${COMPILER_SOURCES}${ELM}'.ts'
+	tr -d '\r' < ${COMPILER_TMP}${ELM}'.js' > ${COMPILER_PACKAGE_LIB_CLIENT}${ELM}'.js'
+	echo "compiling ${COMPILER_SOURCES_CLIENT}${ELM}.ts"
+
+done
 
 for ELM in ${CLIENT_LIB[*]}
 do

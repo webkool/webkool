@@ -36,9 +36,9 @@
 				<![CDATA[
 					#{include("/header")}#
 						<h1>#title#</h1>
-						<ul>
-							#{names}[][<li><span class="red">#$.id#</span> #$.value#</li>][]#
-						</ul>
+						
+							#{names}[<ul>][<li><span class="red">#$.id#</span> #$.value#</li>][</ul>]#
+						
 						<div>
 							#{articles}[<hr />][<div><h3><i>#$i# </i>#$.title#</h3><p>#$.body#</p></div>][<hr />]#
 						</div>
