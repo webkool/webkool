@@ -8,18 +8,22 @@
 	<server>
 
 		<handler url="/" type="text/html">
+			<on id="request">
+				plop = 2;
+			</on>
+
 			<template system="square">
 				<![CDATA[
 					#{include("/header")}#
-						<h1>BASIC PAGE</h1>
+						<h1>BASIC PAGE #plop#</h1>
 					#{include("/footer")}#
 				]]>
 			</template>
 		</handler>
 
-		<handler url="/basic.client.css" type="text/css">
+		<handler url="/plop.client.css" type="text/css">
 			<on id="render">
-				var css = require('fs').readFileSync('basic.client.css');
+				var css = require('fs').readFileSync('plop.client.css');
 				return (css.toString());
 			</on>
 		</handler>
@@ -30,7 +34,7 @@
 			<html>
 				<head>
 					<title>Basic</title>
-					<link href="basic.client.css" rel="stylesheet" type="text/css" />
+					<link href="plop.client.css" rel="stylesheet" type="text/css" />
 				</head>
 				<body>
 		]]>
