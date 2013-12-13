@@ -45,7 +45,9 @@
     "node-sass":  "*",
     "formidable": "*",
     "node-expat": "*",
-    "optimist":   "*"
+    "optimist":   "*",
+    "color-log":  "*",
+    "exec-sync":  "*"
   },
   
   "engines": {
