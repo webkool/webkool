@@ -29,3 +29,9 @@ open-source platform to develop client and/or server web application.
 **0.1.2**:
 
 -	update command line parser. now, webkool use 'optimist' module
+
+**0.1.3**:
+
+-	fix output filename for the -o option
+-	auto include .webkool.wk file in main file
+-	auto create .webkool.wk if it doesn’t exist
