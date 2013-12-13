@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<application xmlns="http://www.webkool.net/1.0">
+	<property id="name">square demo</property>
+	<property id="port">4242</property>
+	<server>
+		<handler url="/" type="text/html">
+			<on id="request">
+				title = "square demo"
+				names = [
+					{ id: 0, value: "ElmZero" },
+					{ id: 1, value: "ElmOne" },
+					{ id: 2, value: "ElmTwo" }
+				];
+				articles = [
+					{ 
+						title: "article1", 
+						body: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec a diam lectus. Sed sit amet ipsum mauris. Maecenas congue ligula ac quam viverra nec consectetur ante hendrerit. Donec et mollis dolor. Praesent et diam eget libero egestas mattis sit amet vitae augue. Nam tincidunt congue enim, ut porta lorem lacinia consectetur. Donec ut libero sed."
+					},
+					{ 
+						title: "article2", 
+						body: "Pellentesque auctor nisi id magna consequat sagittis. Curabitur dapibus enim sit amet elit pharetra tincidunt feugiat nisl imperdiet. Ut convallis libero in urna ultrices accumsan. Donec sed odio eros. Donec viverra mi quis quam pulvinar at malesuada arcu rhoncus. Cum sociis natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus. In rutrum accumsan ultricies. Mauris vitae nisi at sem facilisis semper ac in est."
+					},
+					{ 
+						title: "article3", 
+						body: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. semper ac in est."
+					},
+					{ 
+						title: "article4", 
+						body: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec a diam lectus. Sed sit amet sociis natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus. In rutrum accumsan ultricies. Mauris vitae nisi at sem facilisis semper ac in est."
+					}
+				];
+
+				textSize = 8;
+			</on>
+			<template system="square">
+				<![CDATA[
+					#{include("/header")}#
+						<h1>#title#</h1>
+						
+							#{names}[<ul>][<li><span class="red">#$.id#</span> #$.value#</li>][</ul>]#
+						
+						<div>
+							#{articles}[<hr />][<div><h3><i>#$i# </i>#$.title#</h3><p>#$.body#</p></div>][<hr />]#
+						</div>
+						<div>
+							#{textSize < 10}[<h6>less than 10</h6>][<h3>more than 10</h3>]#
+						</div>
+					#{include("/footer")}#
+				]]>
+			</template>
+		</handler>
+	</server>
+	<template id="/header" system="square">
+		<![CDATA[
+			<html>
+				<head>
+					<title>Basic</title>
+				</head>
+				<body>
+		]]>
+	</template>
+	<template id="/footer" system="square">
+		<![CDATA[
+				</body>
+			</html>
+		]]>
+	</template>
+</application>
