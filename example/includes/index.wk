@@ -4,20 +4,17 @@
 	<property id="name">test</property>
 	<property id="port">4242</property>
 	<client>
+		<include href='client_inc.wk' />
+		<include href='client_inc.css' />
 	</client>
 	<server>
-
+		<include href='server_inc.wk' />
+		<include href='server_inc.css' />
 		<handler url="/" type="text/html">
-			<on id="request">
-				plop = 2;
-			</on>
-
 			<template system="square">
 				<![CDATA[
 					#{include("/header")}#
-						<h1>BASIC PAGE #plop#</h1>
-						<h2>subtitle</h2>
-						<h3>sub-subtitle</h3>
+						<h3>INCLUDE PAGE </h3>
 					#{include("/footer")}#
 				]]>
 			</template>
@@ -25,12 +22,16 @@
 
 		<handler url="/plop.client.css" type="text/css">
 			<on id="render">
-				var css = require('fs').readFileSync('plop.client.css');
+				var css = require('fs').readFileSync('plop.server.css');
 				return (css.toString());
 			</on>
 		</handler>
 	
 	</server>
+
+
+
+
 	<template id="/header" system="square">
 		<![CDATA[
 			<html>
@@ -47,32 +48,4 @@
 			</html>
 		]]>
 	</template>
-
-	<stylesheet type="less">
-		<![CDATA[
-			@size: 	2px;
-			h1 {
-				background: 	#414141;
-				color: 			white;
-				border: 		@size;
-			}
-		]]>
-	</stylesheet>
-	<stylesheet type="sass">
-		<![CDATA[
-			$size: 	1px;
-			h2 {
-				background: 	#424242;
-				color: 			white;
-				border: 		$size;
-			}
-		]]>
-	</stylesheet>
-	<stylesheet type="css">
-		<![CDATA[
-			h3 {
-				border: 		1px;
-			}
-		]]>
-	</stylesheet>
 </application>

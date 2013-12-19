@@ -8,7 +8,7 @@
 				title = "square demo"
 				names = [
 					{ id: 0, value: "ElmZero" },
-					{ id: 1, value: "ElmOne" },
+					{ id: 1, value: "ElmOn" },
 					{ id: 2, value: "ElmTwo" }
 				];
 				articles = [

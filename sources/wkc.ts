@@ -4,6 +4,14 @@
 		- node-expat
 		- fs
 		- ./square.js
+
+
+
+	TODO:
+√		- joinBuffers (need tests)
+√		- add application.start at the enf of .js file (need testes);
+		- add unit tests;
+		- add public/private/protected
 */
 
 
@@ -36,6 +44,7 @@ module Webkool {
 	*/
 	
 	var expat = require('node-expat');
+	var sbuff = require('stream-buffers');
 	var fs = require('fs');
 	
 	var outputJS,
@@ -46,13 +55,96 @@ module Webkool {
 			target: 	{},
 			includes: 	[__dirname + '/../lib/client/', './'],
 			inputs: 	[],
-			output: 	'untitled',
+			output: 	'',
 		};
+
+	enum	SideType {
+		BOTH,
+		SERVER,
+		CLIENT
+	};
+
+	/*
+	**	BufferManager
+	*/
+
+
+	class BufferManager {
+		private 		buffers
+
+		constructor() {
+			this.buffers = [];
+		}
+
+		private newBuffer(neededSide:SideType, name:string) {
+			this.buffers.push({
+				'name': 	name,
+				'side': 	neededSide,
+				'data': 	""
+			});
+		}
+
+		public get(side:SideType, name:string, create:boolean) {
+			for (var i = 0; i < this.buffers.length; i++) {
+				if (this.buffers[i].name == name && this.buffers[i].side == side)
+					return (this.buffers[i]);
+			}
+			if (create) {
+				this.newBuffer(side, name);
+				return (this.get(side, name, false));
+			}
+			return (undefined);
+		}
+
+		public write(side:SideType, name:string, data:string) {
+			this.get(side, name, true).data += data;
+		}
+
+		public getBuffers() {
+			return (this.buffers);
+		}
+
+		public exec(side:SideType, name:string, callback:Function) {
+			callback(this.get(side, name, false));
+		}
+
+		public copy(other:BufferManager) {
+			this.buffers = other.getBuffers();
+		}
+
+		public merge(side:SideType, other:BufferManager) {
+			if (side == SideType.BOTH) {
+				this.merge(SideType.SERVER, other);
+				this.merge(SideType.CLIENT, other);
+			}
+			else {
+				var buff = other.getBuffers();
+
+				for (var i = 0; i < buff.length; i++) {
+					if (side == buff[i].side || buff[i].side == SideType.BOTH)
+						this.write(side, buff[i].name, buff[i].data);
+				}
+			}
+		}
+
+		public dump() {
+			console.log('##################################');
+			for (var i = 0; i < this.buffers.length; i++) {
+				console.log('[' + this.buffers[i].name + ']['+ this.buffers[i].side +'] = ' + this.buffers[i].data);
+				console.log('------------------------------');
+			}
+			console.log('##################################\n');
+		}
+	}	
+
 
 	/*
 	**	Nodes
 	*/
-		
+	
+	
+
+
 	class Element {
 		elementRules;
 
@@ -66,7 +158,7 @@ module Webkool {
 			this.start(parser, name, attrs);
 		}
 
-		start(parser, name, attrs) {
+		public start(parser, name, attrs) {
 			if (parser.currentElement) {
 				parser.currentElement.processText(parser);
 				parser.currentElement.children.push(this);
@@ -79,45 +171,45 @@ module Webkool {
 			parser.currentElement = this;
 		}
 
-		stop(parser, name) {
+		public stop(parser, name) {
 			this.processText(parser);
 			parser.currentElement = this.parent;
 		}
 
-		prepare(parser) {
+		public prepare(parser) {
 			this.children.forEach(function(item) {
 				item.prepare(parser);
 			});
 		}
 
-		processElement(parser, name, attrs) {
+		public processElement(parser, name, attrs) {
 			if (this.elementRules.hasOwnProperty(name))
 				return new (this.elementRules[name])(parser, name, attrs);
 			parser.error('Element not found <' + name + '>');
 		}
 
-		processText(parser) {
+		public processText(parser) {
 			this.text += parser.currentText;
 			parser.currentText = '';
 		}
 
-		print(js, css) {
-			this.printHeader(js, css);
-			this.printBody(js, css);
-			this.printFooter(js, css);
+		public		print(buffers: BufferManager, side: SideType) {
+			this.printHeader(buffers, side);
+			this.printBody(buffers, side);
+			this.printFooter(buffers, side);
 		}
 
-		printHeader(js, css) {
+		public	printHeader(buffers: BufferManager, side: SideType) {
 			return;
 		}
 
-		printBody(js, css) {
+		public	printBody(buffers: BufferManager, side: SideType) {
 			this.children.forEach(function(item) {
-				item.print(js, css);
+				item.print(buffers, side);
 			});
 		}
 
-		printFooter(js, css) {
+		public	printFooter(buffers: BufferManager, side: SideType) {
 			return;
 		}
 	}
@@ -126,68 +218,47 @@ module Webkool {
 		elementRules = {};
 		name = 'include';
 		parser;
+		preparedBuffers;
 		js;
 		css;
+
 
 		constructor(parser, name, attrs) {
 			super(parser, name, attrs);
 			this.parser = parser;
+			this.preparedBuffers = new BufferManager();
 		}
 
-		prepare(parser) {
+		public prepare(parser) {
 			var element = this;
-			var filename = getPath(this.attrs.href), 
-				filestream;
-			
+			var filename = getPath(this.attrs.href);
+			var extension = '.' + filename.split('.').pop();
+
+			console.log('# including ' + this.attrs.href);
 			if (!filename) {
 				console.log('// include ' + this.attrs.href + ' not found!');
 			}
 			else {
-				if (filename.substring(filename.length-3) === '.js') {
-					console.log('# including ' + this.attrs.href);
+				if (extension == '.wk') {
 					parser.wait(this);
-					fs.readFile(filename, function (err, data) {
-						element.js = data;
-						parser.dequeue(element);
-					});
-				}
-				else if (filename.substring(filename.length-4) === '.css') {
-					console.log('# including ' + this.attrs.href);
-					parser.wait(this);
-					fs.readFile(filename, function (err, data) {
-						element.css = data;
-						parser.dequeue(element);
-					});
-				}
-				else if (filename.substring(filename.length-3) === '.wk') {
-					parser.wait(this);
-					doParseDocument(filename, function (js, css) {
-						element.js = js;
-						element.css = css;
+					doParseDocument(filename, function (buffers) {
+						element.preparedBuffers.copy(buffers);
 						parser.dequeue(element);
 					});
 				}
 				else {
-					console.log('// include ' + this.attrs.href + ' extension not found!');
+					parser.wait(this);
+					fs.readFile(filename, function (err, data) {
+						element.preparedBuffers.write(SideType.BOTH, extension, '/* include ' + element.attrs.href + '*/\n');
+						element.preparedBuffers.write(SideType.BOTH, extension, data);
+						parser.dequeue(element);
+					});
 				}
 			}
 		}
 
-		printBody(js, css) {
-			if (this.attrs.href.substring(this.attrs.href.length-3) === '.js') {
-				js.write('// include ' + this.attrs.href + '\n');
-				js.write(this.js);
-			}
-			else if (this.attrs.href.substring(this.attrs.href.length-4) === '.css') {
-				css.write('/* include ' + this.attrs.href + '*/\n');
-				css.write(this.css);
-			}
-			else if (this.attrs.href.substring(this.attrs.href.length-3) === '.wk') {
-				js.write('// include ' + this.attrs.href + '\n');
-				js.write(this.js);
-				css.write('/* include ' + this.attrs.href + '*/\n');
-				css.write(this.css);
-			}
+		printBody(buffers: BufferManager, side: SideType) {
+			buffers.merge(side, this.preparedBuffers);
 		}
 	}
 
@@ -199,12 +270,12 @@ module Webkool {
 			super(parser, name, attrs);
 		}
 
-		printBody(js, css) {
-			js.write('on_');
-			js.write(this.attrs.id);
-			js.write(': { value: function(context, model, query, result) {');
-			js.write(this.text);
-			js.write('}},\n');
+		printBody(buffers: BufferManager, side: SideType) {
+			buffers.write(side, '.js', 'on_');
+			buffers.write(side, '.js', this.attrs.id);
+			buffers.write(side, '.js', ': { value: function(context, model, query, result) {');
+			buffers.write(side, '.js', this.text);
+			buffers.write(side, '.js', '}},\n');
 		}
 	}
 
@@ -216,15 +287,14 @@ module Webkool {
 			super(parser, name, attrs);
 		}
 
-		printBody(js, css) {
-			if (!this.attrs.hasOwnProperty('id')) {
-			 throw new Error('properties must have an id!');
-			}
-			js.write('application.addProperty(\"');
-			js.write(this.attrs.id);
-			js.write('\", \"');
-			js.write(this.text);
-			js.write('\");\n');
+		printBody(buffers: BufferManager, side: SideType) {
+			if (!this.attrs.hasOwnProperty('id'))
+				throw new Error('properties must have an id!');
+			buffers.write(side, '.js', 'application.addProperty(\"');
+			buffers.write(side, '.js', this.attrs.id);
+			buffers.write(side, '.js', '\", \"');
+			buffers.write(side, '.js', this.text);
+			buffers.write(side, '.js', '\");\n');
 		}
 	}
 
@@ -236,9 +306,9 @@ module Webkool {
 			super(parser, name, attrs);
 		}
 
-		printBody(js, css) {
-			js.write(this.text);
-			js.write('\n');
+		printBody(buffers: BufferManager, side: SideType) {
+			buffers.write(side, '.js', this.text);
+			buffers.write(side, '.js', '\n');
 		}
 	}
 
@@ -253,11 +323,10 @@ module Webkool {
 				this.type = this.attrs.type;
 		}
 		
-		print(js, css) {
-			if (this.type != 'css')
-				styleSheetEngine[this.type].compile(this.text, css);
-			else
-				css.write(this.text);
+		//styleSheetEngine[this.type].compile(this.text, css);
+
+		print(buffers: BufferManager, side: SideType) {
+			buffers.write(side, '.' + this.type, this.text)
 		}
 	}
 
@@ -273,13 +342,13 @@ module Webkool {
 			
 		}
 
-		printHeader(js, css) {
+		printHeader(buffers: BufferManager, side: SideType) {
 			if (this.attrs.hasOwnProperty('id')) {
 				if (Handler.prototype.isPrototypeOf(this.parent))
 					throw new Error('Embedded templates have no id!');
-				js.write('application.addTemplate(\"');
-				js.write(this.attrs.id);
-				js.write('\", Object.create(Template.prototype, {\n');
+				buffers.write(side, '.js', 'application.addTemplate(\"');
+				buffers.write(side, '.js', this.attrs.id);
+				buffers.write(side, '.js', '\", Object.create(Template.prototype, {\n');
 			}
 			else {
 				if (!Handler.prototype.isPrototypeOf(this.parent))
@@ -287,34 +356,39 @@ module Webkool {
 			}
 		}
 
-		printBody(js, css) {
-			js.write('on_render');
-			js.write(': { value:\n');
+		printBody(buffers: BufferManager, side: SideType) {
+			buffers.write(side, '.js', 'on_render');
+			buffers.write(side, '.js', ': { value:\n');
 
-			var string = this.text.replace(/\s+/g, ' '), buffer, templateCompiler;
-			string = string.replace(/\"/g, '\\\"');
-			buffer = new Buffer(string);
-			templateCompiler = new templateEngine[this.templateName].parse(buffer);
-			templateCompiler.print(js, '');
-			js.write('},\n');
+			var cleaned = this.text.replace(/\s+/g, ' ');	//for a pretty indentation
+			cleaned = cleaned.replace(/\"/g, '\\\"'); 		//keep \ in file;
+
+			var bufferString = new Buffer(cleaned);
+			var streamBuff = new sbuff.WritableStreamBuffer();
+
+			var templateCompiler = new templateEngine[this.templateName].parse(bufferString);
+			templateCompiler.print(streamBuff, '');	// compile and put the result in bufferTmp
+			
+			buffers.write(side, '.js', streamBuff.getContentsAsString("utf8"));
+			buffers.write(side, '.js', '},\n');
 		}
 
-		printFooter(js, css) {
+		printFooter(buffers: BufferManager, side: SideType) {
 			if (this.attrs.hasOwnProperty('id')) {
-				js.write('\n}));\n\n');
+				buffers.write(side, '.js', '\n}));\n\n');
 			}
 		}
 	}
 
 	class Client extends Element {
 		elementRules = {
-			handler: Handler,
-			include: Include,
-			on: On,
-			property: Property,
-			script: Script,
+			handler: 	Handler,
+			include:	Include,
+			on: 		On,
+			property: 	Property,
+			script: 	Script,
 			stylesheet: Stylesheet,
-			template: Template
+			template: 	Template
 		};
 		name = 'client';
 
@@ -322,20 +396,9 @@ module Webkool {
 			super(parser, name, attrs);
 		}
 
-		print(js, css) {
-			if (options.client) {
-				var flag = true;
-				if (this.attrs.hasOwnProperty('target')) {
-					/*
-					with (options.target) {
-						flag = this.attrs.target;
-					}
-					*/
-					return;
-				}
-				if (flag)
-					Element.prototype.print.call(this, js, css);
-			}
+		print(buffers: BufferManager, side: SideType) {
+			if (options.client || (!options.client && !options.server))
+				Element.prototype.print.call(this, buffers, SideType.CLIENT);
 		}
 	}
 
@@ -351,22 +414,22 @@ module Webkool {
 			super(parser, name, attrs);
 		}
 
-		printHeader(js, css) {
-			js.write('application.addHandler(\"');
-			js.write(this.attrs.url);
-			js.write('\", Object.create(Handler.prototype, {\n');
-			js.write('url : { value: \"');
-			js.write(this.attrs.url);
-			js.write('\"},\n');
+		printHeader(buffers: BufferManager, side: SideType) {
+			buffers.write(side, '.js', 'application.addHandler(\"');
+			buffers.write(side, '.js', this.attrs.url);
+			buffers.write(side, '.js', '\", Object.create(Handler.prototype, {\n');
+			buffers.write(side, '.js', 'url : { value: \"');
+			buffers.write(side, '.js', this.attrs.url);
+			buffers.write(side, '.js', '\"},\n');
 			if (this.attrs.type) {
-				js.write('contentType : { value: \"');
-				js.write(this.attrs.type);
-				js.write('\"},\n');
+				buffers.write(side, '.js', 'contentType : { value: \"');
+				buffers.write(side, '.js', this.attrs.type);
+				buffers.write(side, '.js', '\"},\n');
 			}
 		}
 
-		printFooter(js, css) {
-			js.write('\n}));\n\n');
+		printFooter(buffers: BufferManager, side: SideType) {
+			buffers.write(side, '.js', '\n}));\n\n');
 		}
 	}
 
@@ -378,8 +441,8 @@ module Webkool {
 			super(parser, name, attrs);
 		}
 
-		printBody(js, css) {
-			js.write('application.addObserver(' + this.attrs.data + ', ' + this.attrs.with + ');\n');
+		printBody(buffers: BufferManager, side: SideType) {
+			buffers.write(side, '.js', 'application.addObserver(' + this.attrs.data + ', ' + this.attrs.with + ');\n');
 		}
 
 	}
@@ -400,20 +463,9 @@ module Webkool {
 			super(parser, name, attrs);
 		}
 
-		print(js, css) {
-			if (options.server) {
-				var flag = true;
-				if (this.attrs.hasOwnProperty('target')) {
-					/*
-						with (options.target) {
-						flag = this.attrs.target;
-					}
-					*/
-					return;
-				}
-				if (flag)
-					Element.prototype.print.call(this, js, css);
-			}
+		print(buffers: BufferManager, side: SideType) {
+			if (options.server || (!options.client && !options.server))
+				Element.prototype.print.call(this, buffers, SideType.SERVER);
 		}
 	}
 
@@ -446,31 +498,10 @@ module Webkool {
 		}
 	}
 
-	class StreamBuffer {
-		buffers;
+	/*
+	** Parse Arguments
+	*/
 
-		constructor() {
-			this.buffers = [];
-		}
-
-		write(data) {
-			if (data) {
-				if (typeof data  === "string")
-					this.buffers.push(new Buffer(data));
-				else
-					this.buffers.push(data);
-			}
-		}
-
-		toString() {
-			if (this.buffers.length) {
-				return Buffer.concat(this.buffers);
-			}
-			else {
-				return "";
-			}
-		}
-	}
 
 	function doParseArguments (options) {
 		var argv = require('optimist')
@@ -502,10 +533,12 @@ module Webkool {
 		argv._.forEach(function (elm) { options.inputs.push(elm) });
 	}
 
+	/*
+	** parsing entry point and utils
+	*/
 
-//historique:  a 
-	function doNextDocument() {
-		
+
+	function doNextDocument() {		
 		if (options.inputs.length) {
 			doParseDocument(options.inputs.shift(), doNextDocument);
 		}
@@ -528,11 +561,10 @@ module Webkool {
 			if (index < 0) console.log('>>>> DEQUEUE UNKNOWN ELEMENT');
 			this.elements.splice(index, 1);
 			if (this.elements.length == 0) {
-				var js = new StreamBuffer();
-				var css = new StreamBuffer();
-				this.currentElement.print(js, css);
+				var buffers = new BufferManager();
+				this.currentElement.print(buffers, SideType.BOTH);
 				if (callback)
-					callback(js.toString(), css.toString());
+					callback(buffers);
 				}
 		}
 		parser.error = function (e) {
@@ -592,37 +624,97 @@ module Webkool {
 	function checkWebKoolWkFileExistence() {
 		try {
 			var path = fs.realpathSync('./.webkool.wk');
-			console.log(path);
 		} catch (e) {
 			var data = fs.readFileSync(__dirname + '/../sources/templates/webkool.wk');
 			fs.writeFileSync('./.webkool.wk', data);
 		}
 	}
 
-	export function run() {
-		doParseArguments(options);
+	function createFilesForSide(side:SideType, buffers:BufferManager, name) {
+		if (side == SideType.BOTH) {
+			createFilesForSide(SideType.SERVER, buffers, ((name.length == 0) ? ('') : (name + '.')) + 'server');
+			createFilesForSide(SideType.CLIENT, buffers, ((name.length == 0) ? ('') : (name + '.')) + 'client');
+		}
+		else {
+			var buff = buffers.getBuffers();
+			for (var i = 0; i < buff.length; i++) {
+				console.log('[', buff[i].side, '] = ', buff[i].name);
+				if (buff[i].side == side && (buff[i].name == '.js' || buff[i].name == '.css')) {
+					var fileName = name + buff[i].name;
+					var outputStream = fs.createWriteStream(fileName);
 
-		checkWebKoolWkFileExistence();
-
-		doParseDocument('.webkool.wk', function (initialJs, initialCss) {
-			var name = options.output + ((options.server) ? ('.server') : ('.client'));
-			var jsStream = fs.createWriteStream(name + '.js');
-			if (options.client) {
-				var cssStream = fs.createWriteStream(name + '.css');
-				cssStream.write(initialCss)
+					console.log('#saving in file ' + name);
+					outputStream.write(buff[i].data);
+				}
 			}
-			jsStream.write(initialJs);
-			
-			doParseDocument(options.inputs.shift(),
-				function (js, css) {
-					jsStream.write(js);
-					if (options.server == true)
-						jsStream.write('\napplication.start()\n');
-					if (options.client)
-						cssStream.write(css)
+		}
+	}
+
+	function  joinBuffers(side:SideType, buffers:BufferManager) {
+		if (side == SideType.BOTH) {
+			joinBuffers(SideType.SERVER, buffers);
+			joinBuffers(SideType.CLIENT, buffers);
+		}
+		else {
+			//.less and .sass append at the end of .css buffer
+			for (var eng in styleSheetEngine) {
+				if (eng != 'css')
+					var engBuffer = buffers.get(side, '.' + eng, false);
+				if (engBuffer) {
+					var streamBuff = new sbuff.WritableStreamBuffer();
+	
+					styleSheetEngine[eng].compile(engBuffer.data, streamBuff);
+					buffers.write(side, '.css', streamBuff.getContentsAsString("utf8"));
+				}
+			}
+			//append application start at the end of .js
+			if (side == SideType.SERVER)
+				var js = buffers.write(SideType.SERVER, '.js', '\napplication.start()\n');
+		}
+	}
+
+
+
+	export function run() {
+		//feed the option object with the command line;
+		doParseArguments(options);
+		//create a .webkool.wk file if it doesn't exist.
+		checkWebKoolWkFileExistence();
+		//begin the parsing of .webkool.wk
+		doParseDocument('.webkool.wk', function (initialBuffers:BufferManager) {
+			var _buffers = initialBuffers;
+			//parse the entry point (index.wk for example)
+			doParseDocument(options.inputs.shift(), function (buffers:BufferManager) {
+				//merge buffers created by .webkool.wk and the entry point
+				_buffers.merge(SideType.BOTH, buffers);
+				
+				//process some operation over buffer
+				joinBuffers(SideType.BOTH, _buffers);
+
+				//write in file
+				if (options.client)
+					createFilesForSide(SideType.CLIENT, _buffers, (options.output.length == 0 ? 'client' : options.output));
+				if (options.server)
+					createFilesForSide(SideType.SERVER, _buffers, (options.output.length == 0 ? 'server' : options.output));
+				if ((options.server && options.client) || (!options.server && !options.client))
+					createFilesForSide(SideType.BOTH, _buffers, options.output);
 			});
 		});
 	}
 }
 
 Webkool.run()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
