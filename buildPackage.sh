@@ -1,66 +1,75 @@
-#! /bin/bash
+#!/bin/bash
+########################################################
+#        			Package Builder 				   #
+#													   #
+########################################################
 
-COMPILER_PACKAGE='./'
-COMPILER_PACKAGE_LIB=${COMPILER_PACKAGE}'lib/'
-COMPILER_PACKAGE_BIN=${COMPILER_PACKAGE}'bin/'
-COMPILER_PACKAGE_LIB_CLIENT=${COMPILER_PACKAGE_LIB}'client/'
+COMPILER_TMP='./sources/tmp/'
 
-COMPILER_SOURCES=${COMPILER_PACKAGE}'sources/'
-COMPILER_SOURCES_CLIENT=${COMPILER_PACKAGE}'sources/client/'
-COMPILER_TMP=${COMPILER_PACKAGE}'sources/tmp/'
-
-#bins
-
-CLIENT_LIB[0]='hogan-2.0.0.js'
-CLIENT_LIB[1]='square_lib.js'
-
-
-CLIENT_LIB_SRC[0]='webkool'
-CLIENT_LIB_SRC[1]='ApiRequest'
-
-SOURCES[0]='MySQL'
-SOURCES[1]='compass'
-SOURCES[2]='less'
-SOURCES[3]='mustache'
-SOURCES[4]='sass'
-SOURCES[5]='square'
+#compiler name
+BIN_INP_DIR='./sources/'
+BIN_OUT_DIR='./bin/'
 
 BIN='wkc'
 
-#.ts compiling
+#-----------------------------------------------------------------------------------------
+		echo '[0] compiling wkc.ts'
+		tsc --target ES5 --outDir ${COMPILER_TMP} 	${BIN_INP_DIR}${BIN}'.ts'
+		echo '#! /usr/bin/env node' 				> ${BIN_OUT_DIR}${BIN}
+		tr -d '\r' < ${COMPILER_TMP}${BIN}'.js' 	>> ${BIN_OUT_DIR}${BIN}
+		chmod +x 									${BIN_OUT_DIR}${BIN}
+#-----------------------------------------------------------------------------------------
+#sources/client/*.ts 				===> lib/client/*.js
+SOURCES_CLIENT_TS_INP_DIR='./sources/client/'
+SOURCES_CLIENT_TS_OUT_DIR='./lib/client/'
 
-echo "[SERVER LIB] .ts compiling"
-for ELM in ${SOURCES[*]}
-do
-	tsc --target ES5 --outDir ${COMPILER_TMP}  ${COMPILER_SOURCES}${ELM}'.ts'
-	tr -d '\r' < ${COMPILER_TMP}${ELM}'.js' > ${COMPILER_PACKAGE_LIB}${ELM}'.js'
-    echo "compiling ${COMPILER_SOURCES}${ELM}.ts"
-done
+SOURCES_CLIENT_TS[0]='MySQL'
+SOURCES_CLIENT_TS[1]='ApiRequest'
+SOURCES_CLIENT_TS[2]='webkool'
 
-mkdir ${COMPILER_PACKAGE_LIB_CLIENT}
+#-----------------------------------------------------------------------------------------
+		echo '[1] sources/client/*.ts 			===> lib/client/*.js'
+		for ELM in ${SOURCES_CLIENT_TS[*]}
+		do
+			tsc --target ES5 --outDir ${COMPILER_TMP} ${SOURCES_CLIENT_TS_INP_DIR}${ELM}'.ts'
+			tr -d '\r' < ${COMPILER_TMP}${ELM}'.js' > ${SOURCES_CLIENT_TS_OUT_DIR}${ELM}'.js'
+			echo -e '\tcompiling '${SOURCES_CLIENT_TS_INP_DIR}${ELM}'.ts'
+		done
+#-----------------------------------------------------------------------------------------
+#sources/*.ts 						===> lib/*.js
 
-echo "[CLIENT LIB] .js moving"
+SOURCES_TS_INP_DIR='./sources/'
+SOURCES_TS_OUT_DIR='./lib/'
 
-for ELM in ${CLIENT_LIB_SRC[*]}
-do
-	tsc --target ES5 --outDir ${COMPILER_TMP}  ${COMPILER_SOURCES}${ELM}'.ts'
-	tr -d '\r' < ${COMPILER_TMP}${ELM}'.js' > ${COMPILER_PACKAGE_LIB_CLIENT}${ELM}'.js'
-	echo "compiling ${COMPILER_SOURCES_CLIENT}${ELM}.ts"
+SOURCES_TS[0]='compass'
+SOURCES_TS[1]='less'
+SOURCES_TS[2]='mustache'
+SOURCES_TS[3]='square'
+SOURCES_TS[4]='sass'
 
-done
+#-----------------------------------------------------------------------------------------
+		echo '[2] sources/*.ts 				===> lib/*.js'
+		for ELM in ${SOURCES_TS[*]}
+		do
+			tsc --target ES5 --outDir ${COMPILER_TMP} ${SOURCES_TS_INP_DIR}${ELM}'.ts'
+			tr -d '\r' < ${COMPILER_TMP}${ELM}'.js' > ${SOURCES_TS_OUT_DIR}${ELM}'.js'
+			echo -e '\tcompiling '${SOURCES_TS_INP_DIR}${ELM}'.ts'
+		done
+#-----------------------------------------------------------------------------------------
 
-for ELM in ${CLIENT_LIB[*]}
-do
-	cp ${COMPILER_SOURCES_CLIENT}${ELM} ${COMPILER_PACKAGE_LIB_CLIENT}
-    echo "moving ${COMPILER_SOURCES_BIN}${ELM}"
-done
+#sources/client/*.js 				===> lib/client/*.js
+SOURCES_CLIENT_JS_INP_DIR='./sources/client/'
+SOURCES_CLIENT_JS_OUT_DIR='./lib/client/'
 
-echo "[BIN] .ts compiling"
+SOURCES_CLIENT_JS[1]='hogan-2.0.0'
+SOURCES_CLIENT_JS[2]='square_lib'
 
-tsc --target ES5 --outDir ${COMPILER_TMP}  ${COMPILER_SOURCES}${BIN}'.ts'
-echo '#! /usr/bin/env node' > ${COMPILER_PACKAGE_BIN}${BIN}
-tr -d '\r' < ${COMPILER_TMP}${BIN}'.js' >> ${COMPILER_PACKAGE_BIN}${BIN}
-chmod +x ${COMPILER_PACKAGE_BIN}${BIN}
-
-echo "compiling ${COMPILER_SOURCES}${ELM}.ts"
+#-----------------------------------------------------------------------------------------
+		echo '[3] sources/client/*.js 			===> lib/client/*.js'
+		for ELM in ${SOURCES_CLIENT_JS[*]}
+		do
+			cp ${SOURCES_CLIENT_JS_INP_DIR}${ELM}'.js' ${SOURCES_CLIENT_JS_OUT_DIR}${ELM}'.js'
+			echo -e '\tmoving '${SOURCES_CLIENT_JS_INP_DIR}${ELM}'.js'
+		done
+#-----------------------------------------------------------------------------------------
 

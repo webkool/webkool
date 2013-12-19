@@ -4,6 +4,14 @@
 		- node-expat
 		- fs
 		- ./square.js
+
+
+
+	TODO:
+√		- joinBuffers (need tests)
+√		- add application.start at the enf of .js file (need testes);
+		- add unit tests;
+		- add public/private/protected
 */
 
 
@@ -47,7 +55,7 @@ module Webkool {
 			target: 	{},
 			includes: 	[__dirname + '/../lib/client/', './'],
 			inputs: 	[],
-			output: 	'untitled',
+			output: 	'',
 		};
 
 	enum	SideType {
@@ -105,11 +113,17 @@ module Webkool {
 		}
 
 		public merge(side:SideType, other:BufferManager) {
-			var buff = other.getBuffers();
+			if (side == SideType.BOTH) {
+				this.merge(SideType.SERVER, other);
+				this.merge(SideType.CLIENT, other);
+			}
+			else {
+				var buff = other.getBuffers();
 
-			for (var i = 0; i < buff.length; i++) {
-				if (side == buff[i].side || buff[i].side == SideType.BOTH)
-					this.write(side, buff[i].name, buff[i].data);
+				for (var i = 0; i < buff.length; i++) {
+					if (side == buff[i].side || buff[i].side == SideType.BOTH)
+						this.write(side, buff[i].name, buff[i].data);
+				}
 			}
 		}
 
@@ -218,7 +232,7 @@ module Webkool {
 		public prepare(parser) {
 			var element = this;
 			var filename = getPath(this.attrs.href);
-			var extension = filename.substring(filename.length - 3);
+			var extension = '.' + filename.split('.').pop();
 
 			console.log('# including ' + this.attrs.href);
 			if (!filename) {
@@ -226,7 +240,6 @@ module Webkool {
 			}
 			else {
 				if (extension == '.wk') {
-					console.log('parsing wk file');
 					parser.wait(this);
 					doParseDocument(filename, function (buffers) {
 						element.preparedBuffers.copy(buffers);
@@ -234,7 +247,6 @@ module Webkool {
 					});
 				}
 				else {
-					console.log('parsing other ' + this.attrs.href);
 					parser.wait(this);
 					fs.readFile(filename, function (err, data) {
 						element.preparedBuffers.write(SideType.BOTH, extension, '/* include ' + element.attrs.href + '*/\n');
@@ -385,8 +397,7 @@ module Webkool {
 		}
 
 		print(buffers: BufferManager, side: SideType) {
-			console.log(buffers);
-			if (options.client)
+			if (options.client || (!options.client && !options.server))
 				Element.prototype.print.call(this, buffers, SideType.CLIENT);
 		}
 	}
@@ -453,7 +464,7 @@ module Webkool {
 		}
 
 		print(buffers: BufferManager, side: SideType) {
-			if (options.server)
+			if (options.server || (!options.client && !options.server))
 				Element.prototype.print.call(this, buffers, SideType.SERVER);
 		}
 	}
@@ -619,54 +630,91 @@ module Webkool {
 		}
 	}
 
-	function createFilesForSide(side:SideType, buffers:BufferManager) {
-		// a retravailler, il reste des probleme avec les BOTH
+	function createFilesForSide(side:SideType, buffers:BufferManager, name) {
+		if (side == SideType.BOTH) {
+			createFilesForSide(SideType.SERVER, buffers, ((name.length == 0) ? ('') : (name + '.')) + 'server');
+			createFilesForSide(SideType.CLIENT, buffers, ((name.length == 0) ? ('') : (name + '.')) + 'client');
+		}
+		else {
+			var buff = buffers.getBuffers();
+			for (var i = 0; i < buff.length; i++) {
+				console.log('[', buff[i].side, '] = ', buff[i].name);
+				if (buff[i].side == side && (buff[i].name == '.js' || buff[i].name == '.css')) {
+					var fileName = name + buff[i].name;
+					var outputStream = fs.createWriteStream(fileName);
 
-		var buff = buffers.getBuffers();
-		for (var i = 0; i < buff.length; i++) {
-			console.log('i wnat buffer ' + buff[i].name + 'with side ' + side.toString());
-
-			if (buff[i].side == side || side == SideType.BOTH) {
-				var name = options.output + '.' + ((side == SideType.SERVER) ? ('server') : ('client')) + buff[i].name;
-				console.log('#saving in file ' + name);
-
-				var outputStream = fs.createWriteStream(name);
-				outputStream.write(buff[i].data);
+					console.log('#saving in file ' + name);
+					outputStream.write(buff[i].data);
+				}
 			}
 		}
 	}
 
-//pas encore teste.
+	function  joinBuffers(side:SideType, buffers:BufferManager) {
+		if (side == SideType.BOTH) {
+			joinBuffers(SideType.SERVER, buffers);
+			joinBuffers(SideType.CLIENT, buffers);
+		}
+		else {
+			//.less and .sass append at the end of .css buffer
+			for (var eng in styleSheetEngine) {
+				if (eng != 'css')
+					var engBuffer = buffers.get(side, '.' + eng, false);
+				if (engBuffer) {
+					var streamBuff = new sbuff.WritableStreamBuffer();
+	
+					styleSheetEngine[eng].compile(engBuffer.data, streamBuff);
+					buffers.write(side, '.css', streamBuff.getContentsAsString("utf8"));
+				}
+			}
+			//append application start at the end of .js
+			if (side == SideType.SERVER)
+				var js = buffers.write(SideType.SERVER, '.js', '\napplication.start()\n');
+		}
+	}
+
+
 
 	export function run() {
+		//feed the option object with the command line;
 		doParseArguments(options);
-
+		//create a .webkool.wk file if it doesn't exist.
 		checkWebKoolWkFileExistence();
-
+		//begin the parsing of .webkool.wk
 		doParseDocument('.webkool.wk', function (initialBuffers:BufferManager) {
 			var _buffers = initialBuffers;
+			//parse the entry point (index.wk for example)
 			doParseDocument(options.inputs.shift(), function (buffers:BufferManager) {
-				_buffers.merge(SideType.CLIENT, buffers);
-				_buffers.merge(SideType.SERVER, buffers);
-				//buffers.dump();
-				//_buffers.dump();
+				//merge buffers created by .webkool.wk and the entry point
+				_buffers.merge(SideType.BOTH, buffers);
+				
+				//process some operation over buffer
+				joinBuffers(SideType.BOTH, _buffers);
 
+				//write in file
 				if (options.client)
-					createFilesForSide(SideType.CLIENT, _buffers);
+					createFilesForSide(SideType.CLIENT, _buffers, (options.output.length == 0 ? 'client' : options.output));
 				if (options.server)
-					createFilesForSide(SideType.SERVER, _buffers);
-				if (options.server && options.client)
-					createFilesForSide(SideType.BOTH, _buffers);
-
-
-		//			jsStream.write(js);
-		//			if (options.server == true)
-		//				jsStream.write('\napplication.start()\n');
-		//			if (options.client)
-		//				cssStream.write(css)
+					createFilesForSide(SideType.SERVER, _buffers, (options.output.length == 0 ? 'server' : options.output));
+				if ((options.server && options.client) || (!options.server && !options.client))
+					createFilesForSide(SideType.BOTH, _buffers, options.output);
 			});
 		});
 	}
 }
 
 Webkool.run()
+
+
+
+
+
+
+
+
+
+
+
+
+
+

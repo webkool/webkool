@@ -39,15 +39,16 @@
   },
 
   "dependencies": {
-    "less":       "*",
-    "hogan.js":   "*",
-    "mysql":      "*",
-    "node-sass":  "*",
-    "formidable": "*",
-    "node-expat": "*",
-    "optimist":   "*",
-    "color-log":  "*",
-    "exec-sync":  "*"
+    "less":             "*",
+    "hogan.js":         "*",
+    "mysql":            "*",
+    "node-sass":        "*",
+    "formidable":       "*",
+    "node-expat":       "*",
+    "optimist":         "*",
+    "color-log":        "*",
+    "exec-sync":        "*",
+    "stream-buffers":   "*"
   },
   
   "engines": {
