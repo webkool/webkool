@@ -38,9 +38,7 @@ open-source platform to develop client and/or server web application.
 
 **0.1.4**:
 
-<<<<<<< HEAD
 -	ajax request (apiRequest)
-=======
 -	improved one pass compilation
 - 	jshint code fix
->>>>>>> 911ab0f977f87c0e17078bcda0ec3bbe970ce718
+
