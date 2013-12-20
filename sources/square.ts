@@ -364,6 +364,7 @@ module Square {
 			stream.write('function (context, model) {');
 			//
 			carriageReturn(stream, 1);
+			stream.write('/*jshint -W085 */');
 			stream.write('with (model) {');
 			carriageReturn(stream, 1);
 			stream.write("try {");
@@ -381,7 +382,7 @@ module Square {
 			stream.write('}');
 			carriageReturn(stream, -1);
 			stream.write('catch (e) {');
-			stream.write('console.log("ERROR here", e)}');
+			stream.write('console.log("ERROR here", e);}');
 			carriageReturn(stream, -1);
 			stream.write('}');
 			carriageReturn(stream, -1);

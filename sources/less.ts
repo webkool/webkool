@@ -10,7 +10,7 @@ module Less {
 	exports.compile = function compile(buffer, stream) {
 		var m = less.render(buffer, function (e, css) {
 			if (e)
-				throw Error(e);
+				throw new Error(e);
 			stream.write(css);
 		});
 	};

@@ -41,11 +41,10 @@ SOURCES_CLIENT_TS[2]='webkool'
 SOURCES_TS_INP_DIR='./sources/'
 SOURCES_TS_OUT_DIR='./lib/'
 
-SOURCES_TS[0]='compass'
-SOURCES_TS[1]='less'
-SOURCES_TS[2]='mustache'
-SOURCES_TS[3]='square'
-SOURCES_TS[4]='sass'
+SOURCES_TS[0]='less'
+SOURCES_TS[1]='mustache'
+SOURCES_TS[2]='square'
+SOURCES_TS[3]='sass'
 
 #-----------------------------------------------------------------------------------------
 		echo '[2] sources/*.ts 				===> lib/*.js'

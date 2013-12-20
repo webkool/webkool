@@ -35,3 +35,8 @@ open-source platform to develop client and/or server web application.
 -	fix output filename for the -o option
 -	auto include .webkool.wk file in main file
 -	auto create .webkool.wk if it doesn’t exist
+
+**0.1.4**:
+
+-	improved one pass compilation
+- 	jshint code fix

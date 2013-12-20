@@ -26,7 +26,7 @@ module httpDate {
 			if (match)
 				return new Date(Date.UTC(match[7], month[match[2]], match[3], match[4], match[5], match[6]))
 
-			console.log('# Date format was not recognize: ' + d + '\n')
+			console.log('# Date format was not recognize: ' + d + '\n');
 		}
 		return new Date()
 	}
@@ -265,7 +265,7 @@ class Application {
 
 	addObserver(name, selector) {
 		var model = this.getModel();
-		if (model[name] == undefined)
+		if (model[name] === undefined)
 			model[name] = new Observable('');
 		model[name].attach(selector);
 	}
@@ -394,7 +394,7 @@ class Application {
 	}
 
 }
-
+/*jshint -W004 */
 class Server extends Application {
 	mime = {
 		css: 'text/css',
@@ -461,6 +461,7 @@ class Server extends Application {
 						buffer = Buffer.concat([buffer, data]);
 					});
 					part.on('end', function() {
+						/*jshint -W069 */
 						query['data'] = buffer;
 					});
 					part.on('error', function(e) {

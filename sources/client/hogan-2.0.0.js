@@ -24,7 +24,7 @@ var Hogan = {};
     this.options = options;
     this.text = text || '';
     this.buf = (useArrayBuffer) ? [] : '';
-  }
+  };
 
   Hogan.Template.prototype = {
     // render: replaced by generated code.
@@ -160,8 +160,8 @@ var Hogan = {};
       var compiler = this.c;
       var options = this.options;
       options.delimiters = tags;
-      var text = val.call(cx, text);
-      text = (text == null) ? String(text) : text.toString();
+      var texts = val.call(cx, text);
+      texts = (texts === null) ? String(texts) : texts.toString();
       this.b(compiler.compile(text, options).render(cx, partials));
       return false;
     },
@@ -275,7 +275,7 @@ var Hogan = {};
 
     function addBuf() {
       if (buf.length > 0) {
-        tokens.push(new String(buf));
+        tokens.push(String(buf));
         buf = '';
       }
     }
@@ -284,7 +284,7 @@ var Hogan = {};
       var isAllWhitespace = true;
       for (var j = lineStart; j < tokens.length; j++) {
         isAllWhitespace =
-          (tokens[j].tag && tagTypes[tokens[j].tag] < tagTypes['_v']) ||
+          (tokens[j].tag && tagTypes[tokens[j].tag] < tagTypes._v) ||
           (!tokens[j].tag && tokens[j].match(rIsWhitespace) === null);
         if (!isAllWhitespace) {
           return false;
@@ -302,7 +302,7 @@ var Hogan = {};
           if (!tokens[j].tag) {
             if ((next = tokens[j+1]) && next.tag == '>') {
               // set indent to token value
-              next.indent = tokens[j].toString()
+              next.indent = tokens[j].toString();
             }
             tokens.splice(j, 1);
           }
@@ -384,7 +384,7 @@ var Hogan = {};
     filterLine(seenTag, true);
 
     return tokens;
-  }
+  };
 
   function cleanTripleStache(token) {
     if (token.n.substr(token.n.length - 1) === '}') {
@@ -469,9 +469,9 @@ var Hogan = {};
     if (options.asString) {
       return 'function(c,p,i){' + code + ';}';
     }
-
+    /*jshint -W054 */
     return new Hogan.Template(new Function('c', 'p', 'i', code), text, Hogan, options);
-  }
+  };
 
   function esc(s) {
     return s.replace(rSlash, '\\\\')
@@ -544,7 +544,7 @@ var Hogan = {};
     options = options || {};
     return buildTree(tokens, '', [], options.sectionTags || []);
   },
-
+  /*jshint -W030*/
   Hogan.cache = {};
 
   Hogan.compile = function(text, options) {
@@ -570,7 +570,8 @@ var Hogan = {};
     }
 
     t = this.generate(this.parse(this.scan(text, options.delimiters), text, options), text, options);
-    return this.cache[key] = t;
+    this.cache[key] = t;
+    return (this.cache[key]);
   };
 })(typeof exports !== 'undefined' ? exports : Hogan);
 

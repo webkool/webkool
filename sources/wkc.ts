@@ -638,12 +638,11 @@ module Webkool {
 		else {
 			var buff = buffers.getBuffers();
 			for (var i = 0; i < buff.length; i++) {
-				console.log('[', buff[i].side, '] = ', buff[i].name);
 				if (buff[i].side == side && (buff[i].name == '.js' || buff[i].name == '.css')) {
 					var fileName = name + buff[i].name;
 					var outputStream = fs.createWriteStream(fileName);
 
-					console.log('#saving in file ' + name);
+					console.log('#saving in file ' + name + buff[i].name);
 					outputStream.write(buff[i].data);
 				}
 			}
@@ -669,7 +668,7 @@ module Webkool {
 			}
 			//append application start at the end of .js
 			if (side == SideType.SERVER)
-				var js = buffers.write(SideType.SERVER, '.js', '\napplication.start()\n');
+				var js = buffers.write(SideType.SERVER, '.js', '\napplication.start();\n');
 		}
 	}
 
