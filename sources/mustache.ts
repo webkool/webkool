@@ -29,7 +29,7 @@ module Mustache {
 			stream.write('return result;');
 			stream.write('}');
 		}
-	};
+	}
 	
 	exports.parse = function parse(buffer, path) {
 		return new Parser(buffer, path);

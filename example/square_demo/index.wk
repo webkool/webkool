@@ -5,7 +5,7 @@
 	<server>
 		<handler url="/" type="text/html">
 			<on id="request">
-				title = "square demo"
+				title = "square demo";
 				names = [
 					{ id: 0, value: "ElmZero" },
 					{ id: 1, value: "ElmOn" },

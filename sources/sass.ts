@@ -11,7 +11,7 @@ module Sass {
 		stream.write(sass.renderSync({
 			data:		buffer,
 			error:		function (e) {
-				throw Error(e);
+				throw new Error(e);
 			}
 		}));
 	};
