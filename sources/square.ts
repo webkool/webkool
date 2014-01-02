@@ -380,9 +380,8 @@ module Square {
 			carriageReturn(stream, -1);
 			//
 			stream.write('}');
-			carriageReturn(stream, -1);
 			stream.write('catch (e) {');
-			stream.write('console.log("ERROR here", e);}');
+			stream.write('return (e); }');
 			carriageReturn(stream, -1);
 			stream.write('}');
 			carriageReturn(stream, -1);
