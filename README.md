@@ -40,3 +40,8 @@ open-source platform to develop client and/or server web application.
 
 -	improved one pass compilation
 - 	jshint code fix
+
+**0.1.5**:
+
+-	improved one pass compilation and bug fixing
+- 	source map support

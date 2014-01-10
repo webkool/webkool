@@ -12,6 +12,10 @@ function printTabs(nbr) {
     return (str);
 }
 
+function epurString(str) {
+    return str.replace(/^\s*$/, '');
+}
+
 var Webkool;
 (function (Webkool) {
     'use strict';
@@ -36,6 +40,7 @@ var Webkool;
     **	require
     */
     var expat = require('node-expat');
+    var sm = require('source-map');
     var sbuff = require('stream-buffers');
     var fs = require('fs');
 
@@ -83,16 +88,35 @@ var Webkool;
             return (undefined);
         };
 
-        BufferManager.prototype.write = function (side, name, data, line) {
-            var buff = this.get(side, name, true);
+        BufferManager.prototype.write = function (side, name, data, info, split) {
+            if (side == SideType.BOTH) {
+                this.write(SideType.SERVER, name, data, info, split);
+                this.write(SideType.CLIENT, name, data, info, split);
+            } else {
+                // if info == null, the chunk will be not add to the source map
+                var buff = this.get(side, name, true);
 
-            if (line == -1)
-                buff.data[buff.data.length] = data;
-else {
-                if (typeof buff.data[line] !== 'undefined') {
-                    buff.data[line] += data;
+                if (split == true) {
+                    data.split('\n').forEach(function (itm, idx, col) {
+                        var infoTmp = {
+                            line: info.line + idx,
+                            col: info.col,
+                            file: info.file
+                        };
+
+                        if ((idx == 0 || idx == col.length - 1) && epurString(itm) == '')
+                            infoTmp = null;
+
+                        buff.data.push({
+                            data: itm + '\n',
+                            info: infoTmp
+                        });
+                    });
                 } else {
-                    buff.data[line] = data;
+                    buff.data.push({
+                        data: data,
+                        info: info
+                    });
                 }
             }
         };
@@ -109,32 +133,129 @@ else {
             this.buffers = other.getBuffers();
         };
 
-        BufferManager.prototype.merge = function (side, other, tabs, line) {
+        BufferManager.prototype.insert = function (side, name, elm, info) {
+            var buff = this.get(side, name, true);
+            buff.data.push({
+                data: elm,
+                info: info
+            });
+        };
+
+        BufferManager.prototype.merge = function (side, other, info) {
             if (side == SideType.BOTH) {
-                this.merge(SideType.SERVER, other, tabs, line);
-                this.merge(SideType.CLIENT, other, tabs, line);
+                this.merge(SideType.SERVER, other, info.line);
+                this.merge(SideType.CLIENT, other, info.line);
             } else {
                 var buff = other.getBuffers();
-                var newBuffers = {};
 
                 for (var i = 0; i < buff.length; i++) {
                     if (buff[i].side == side || buff[i].side == SideType.BOTH) {
-                        if (typeof newBuffers[buff[i].name] === 'undefined') {
-                            newBuffers[buff[i].name] = [];
-                        }
-                        for (var j = 0; j < buff[i].data.length; j++) {
-                            if (typeof newBuffers[buff[i].name][j] !== 'undefined')
-                                newBuffers[buff[i].name][j] += buff[i].data[j] || '';
-else
-                                newBuffers[buff[i].name][j] = buff[i].data[j] || '';
-                        }
+                        this.insert(side, buff[i].name, buff[i].data, info);
                     }
                 }
-                for (var name in newBuffers) {
-                    line = this.get(side, name, true).data.length;
-                    this.write(side, name, newBuffers[name].join(''), line);
+            }
+        };
+
+        BufferManager.prototype.profoundToSourceMap = function (map, line, elm) {
+            for (var i = 0; i < elm.length; i++) {
+                var itm = elm[i];
+                if (itm.data instanceof Array)
+                    line = this.profoundToSourceMap(map, line, itm.data);
+else {
+                    if (itm.info != null) {
+                        map.addMapping({
+                            'generated': {
+                                'line': line,
+                                'column': 0
+                            },
+                            'source': itm.info.file,
+                            'original': {
+                                'line': itm.info.line,
+                                'column': itm.info.col
+                            },
+                            'name': 'plop'
+                        });
+                    } else {
+                        map.addMapping({
+                            generated: {
+                                line: line,
+                                column: 0
+                            }
+                        });
+                    }
+                    line += itm.data.split('\n').length - 1;
                 }
             }
+            return (line);
+        };
+
+        BufferManager.prototype.toSourceMap = function (side, name, filename) {
+            var map = new sm.SourceMapGenerator({ file: 'out.js' });
+            var generatedLine = 1;
+            var buff = this.get(side, name, false);
+
+            if (typeof buff !== 'undefined') {
+                for (var i = 0; i < buff.data.length; i++) {
+                    var elm = buff.data[i];
+
+                    if (elm.data instanceof Array) {
+                        generatedLine = this.profoundToSourceMap(map, generatedLine, elm.data);
+                    } else {
+                        if (elm.info != null) {
+                            map.addMapping({
+                                generated: {
+                                    line: generatedLine,
+                                    column: 0
+                                },
+                                source: elm.info.file,
+                                original: {
+                                    line: elm.info.line,
+                                    column: elm.info.col
+                                },
+                                name: 'plop'
+                            });
+                        } else {
+                            map.addMapping({
+                                generated: {
+                                    line: generatedLine,
+                                    column: 0
+                                }
+                            });
+                        }
+                        generatedLine += elm.data.split('\n').length - 1;
+                    }
+                }
+            }
+            return (map);
+        };
+
+        //output generation
+        BufferManager.prototype.profoundToString = function (data) {
+            var output = '';
+
+            data.forEach(function (elm) {
+                if (elm.data instanceof Array)
+                    output += this.profoundToString(elm.data);
+else
+                    output += elm.data;
+            });
+            return (output);
+        };
+
+        BufferManager.prototype.toString = function (side, name) {
+            var output = '';
+            var buff = this.get(side, name, false);
+            var _this = this;
+
+            if (typeof buff !== 'undefined') {
+                buff.data.forEach(function (elm) {
+                    if (elm.data instanceof Array)
+                        output += _this.profoundToString(elm.data);
+else
+                        output += elm.data;
+                });
+            }
+            return (output);
         };
 
         BufferManager.prototype.dump = function () {
@@ -155,8 +276,13 @@ else
     **	Nodes
     */
     var Element = (function () {
-        function Element(parser, name, attrs) {
+        function Element(parser, name, attrs, filename) {
             this.line = parser.getCurrentLineNumber();
+            this.location = {
+                line: parser.getCurrentLineNumber(),
+                col: parser.getCurrentColumnNumber(),
+                file: filename
+            };
             this.start(parser, name, attrs);
         }
         Element.prototype.start = function (parser, name, attrs) {
@@ -169,6 +295,7 @@ else
             this.name = name;
             this.attrs = attrs;
             this.text = '';
+            this.outputType = '.js';
             parser.currentElement = this;
         };
 
@@ -177,15 +304,15 @@ else
             parser.currentElement = this.parent;
         };
 
-        Element.prototype.prepare = function (parser, tabs) {
+        Element.prototype.prepare = function (parser) {
             this.children.forEach(function (item) {
-                item.prepare(parser, tabs);
+                item.prepare(parser);
             });
         };
 
-        Element.prototype.processElement = function (parser, name, attrs, line) {
+        Element.prototype.processElement = function (parser, name, attrs) {
             if (this.elementRules.hasOwnProperty(name))
-                return new (this.elementRules[name])(parser, name, attrs);
+                return new (this.elementRules[name])(parser, name, attrs, this.location.file);
             parser.error('Element not found <' + name + '>');
         };
 
@@ -194,38 +321,44 @@ else
             parser.currentText = '';
         };
 
-        Element.prototype.print = function (buffers, side, tabs) {
-            this.printHeader(buffers, side, tabs);
-            this.printBody(buffers, side, tabs);
-            this.printFooter(buffers, side, tabs);
+        Element.prototype.print = function (buffers, side) {
+            this.printHeader(buffers, side);
+            this.printBody(buffers, side);
+            this.printFooter(buffers, side);
         };
 
-        Element.prototype.printHeader = function (buffers, side, tabs) {
-            return;
+        Element.prototype.printHeader = function (buffers, side) {
         };
 
-        Element.prototype.printBody = function (buffers, side, tabs) {
+        Element.prototype.printBody = function (buffers, side) {
             this.children.forEach(function (item) {
-                item.print(buffers, side, tabs);
+                item.print(buffers, side);
             });
         };
 
-        Element.prototype.printFooter = function (buffers, side, tabs) {
-            return;
+        Element.prototype.printFooter = function (buffers, side) {
+        };
+
+        Element.prototype.getLocation = function (offsetLine, offsetColumn) {
+            var location = this.location;
+
+            location.line += offsetLine;
+            location.col += offsetColumn;
+            return (location);
         };
         return Element;
     })();
 
     var Include = (function (_super) {
         __extends(Include, _super);
-        function Include(parser, name, attrs) {
-            _super.call(this, parser, name, attrs);
+        function Include(parser, name, attrs, filename) {
+            _super.call(this, parser, name, attrs, filename);
             this.elementRules = {};
             this.name = 'include';
             this.parser = parser;
             this.preparedBuffers = new BufferManager();
         }
-        Include.prototype.prepare = function (parser, tabs) {
+        Include.prototype.prepare = function (parser) {
             var element = this;
             var filename = getPath(this.attrs.href);
             var extension = '.' + filename.split('.').pop();
@@ -236,120 +369,147 @@ else
             } else {
                 if (extension == '.wk') {
                     parser.wait(this);
+                    this.outputType = '.wk';
                     doParseDocument(filename, function (buffers) {
-                        element.preparedBuffers.copy(buffers);
+                        element.preparedBuffers = buffers;
                         parser.dequeue(element);
-                    }, tabs + 1);
+                    });
                 } else {
                     parser.wait(this);
+                    this.outputType = extension;
+                    var _this = this;
                     fs.readFile(filename, function (err, data) {
-                        element.preparedBuffers.write(SideType.BOTH, extension, '/* include ' + element.attrs.href + '*/\n', 0);
-                        element.preparedBuffers.write(SideType.BOTH, extension, data, 0);
+                        var res = '';
+
+                        res += '/* include ' + element.attrs.href + '*/\n';
+                        res += data.toString();
+
+                        element.preparedBuffers.write(SideType.BOTH, extension, res, null, false);
+
                         parser.dequeue(element);
                     });
                 }
             }
         };
 
-        Include.prototype.printBody = function (buffers, side, tabs) {
-            buffers.merge(side, this.preparedBuffers, tabs, this.line);
+        Include.prototype.printBody = function (buffers, side) {
+            buffers.merge(side, this.preparedBuffers, this.location.line);
         };
         return Include;
     })(Element);
 
     var On = (function (_super) {
         __extends(On, _super);
-        function On(parser, name, attrs) {
-            _super.call(this, parser, name, attrs);
+        function On(parser, name, attrs, filename) {
+            _super.call(this, parser, name, attrs, filename);
             this.elementRules = {};
             this.name = 'on';
         }
-        On.prototype.printBody = function (buffers, side, tabs) {
-            buffers.write(side, '.js', 'on_', this.line);
-            buffers.write(side, '.js', this.attrs.id, this.line);
-            buffers.write(side, '.js', ': { value: function(context, model, query, result) {', this.line);
-            buffers.write(side, '.js', this.text, this.line);
-            buffers.write(side, '.js', '}},\n', this.line);
+        On.prototype.printBody = function (buffers, side) {
+            var begin = 'on_' + this.attrs.id + ': { value: function(context, model, query, result) {';
+            var middle = this.text;
+            var end = '}},\n';
+
+            buffers.write(side, this.outputType, begin, null, false);
+            buffers.write(side, this.outputType, middle, this.location, true);
+            buffers.write(side, this.outputType, end, null, false);
         };
         return On;
     })(Element);
 
     var Property = (function (_super) {
         __extends(Property, _super);
-        function Property(parser, name, attrs) {
-            _super.call(this, parser, name, attrs);
+        function Property(parser, name, attrs, filename) {
+            _super.call(this, parser, name, attrs, filename);
             this.elementRules = {};
             this.name = 'property';
         }
-        Property.prototype.printBody = function (buffers, side, tabs) {
+        Property.prototype.printBody = function (buffers, side) {
             if (!this.attrs.hasOwnProperty('id'))
                 throw new Error('properties must have an id!');
-            buffers.write(side, '.js', 'application.addProperty(\"', this.line);
-            buffers.write(side, '.js', this.attrs.id, this.line);
-            buffers.write(side, '.js', '\", \"', this.line);
-            buffers.write(side, '.js', this.text, this.line);
-            buffers.write(side, '.js', '\");\n', this.line);
+
+            var data = '';
+
+            data += 'application.addProperty(\"';
+            data += this.attrs.id;
+            data += '\", \"';
+            data += this.text;
+            data += '\");\n';
+
+            buffers.write(side, this.outputType, data, null, false);
         };
         return Property;
     })(Element);
 
     var Script = (function (_super) {
         __extends(Script, _super);
-        function Script(parser, name, attrs) {
-            _super.call(this, parser, name, attrs);
+        function Script(parser, name, attrs, filename) {
+            _super.call(this, parser, name, attrs, filename);
             this.elementRules = {};
             this.name = 'script';
         }
-        Script.prototype.printBody = function (buffers, side, tabs) {
-            buffers.write(side, '.js', this.text, this.line);
-            buffers.write(side, '.js', '\n', this.line);
+        Script.prototype.printBody = function (buffers, side) {
+            var data = '';
+
+            data += this.text;
+
+            buffers.write(side, this.outputType, data, this.location, true);
         };
         return Script;
     })(Element);
 
     var Stylesheet = (function (_super) {
         __extends(Stylesheet, _super);
-        function Stylesheet(parser, name, attrs) {
-            _super.call(this, parser, name, attrs);
+        function Stylesheet(parser, name, attrs, filename) {
+            _super.call(this, parser, name, attrs, filename);
             this.elementRules = {};
             this.name = 'stylesheet';
             this.type = 'css';
             if (this.attrs.hasOwnProperty('type') && styleSheetEngine.hasOwnProperty(this.attrs.type))
-                this.type = this.attrs.type;
+                this.outputType = '.' + this.attrs.type;
         }
-        //styleSheetEngine[this.type].compile(this.text, css);
-        Stylesheet.prototype.print = function (buffers, side, tabs) {
-            buffers.write(side, '.' + this.type, this.text, this.line);
+        Stylesheet.prototype.printBody = function (buffers, side) {
+            var data = '';
+
+            data += this.text;
+
+            buffers.write(side, this.outputType, data, null, false);
         };
         return Stylesheet;
     })(Element);
 
     var Template = (function (_super) {
         __extends(Template, _super);
-        function Template(parser, name, attrs) {
-            _super.call(this, parser, name, attrs);
+        function Template(parser, name, attrs, filename) {
+            _super.call(this, parser, name, attrs, filename);
             this.elementRules = {};
             this.name = 'template';
             this.templateName = 'square';
             if (this.attrs.hasOwnProperty('system') && templateEngine.hasOwnProperty(this.attrs.system))
                 this.templateName = this.attrs.system;
         }
-        Template.prototype.printHeader = function (buffers, side, tabs) {
+        Template.prototype.printHeader = function (buffers, side) {
             if (this.attrs.hasOwnProperty('id')) {
                 if (Handler.prototype.isPrototypeOf(this.parent))
                     throw new Error('Embedded templates have no id!');
-                buffers.write(side, '.js', 'application.addTemplate(\"', this.line);
-                buffers.write(side, '.js', this.attrs.id, this.line);
-                buffers.write(side, '.js', '\", Object.create(Template.prototype, {\n', this.line);
+                var data = '';
+
+                data += 'application.addTemplate(\"';
+                data += this.attrs.id;
+                data += '\", Object.create(Template.prototype, {\n';
+
+                buffers.write(side, this.outputType, data, null, false);
             } else {
                 if (!Handler.prototype.isPrototypeOf(this.parent))
                     throw new Error('Stand-alone templates must have an id!');
             }
         };
 
-        Template.prototype.printBody = function (buffers, side, tabs) {
-            buffers.write(side, '.js', 'on_render', this.line);
-            buffers.write(side, '.js', ': { value:\n', this.line);
+        Template.prototype.printBody = function (buffers, side) {
+            var data = '';
+
+            data += 'on_render';
+            data += ': { value:\n';
 
             var cleaned = this.text.replace(/\s+/g, ' ');
             cleaned = cleaned.replace(/\"/g, '\\\"');
@@ -360,13 +520,18 @@ else
             var templateCompiler = new templateEngine[this.templateName].parse(bufferString);
             templateCompiler.print(streamBuff, '');
 
-            buffers.write(side, '.js', streamBuff.getContentsAsString("utf8"), this.line);
-            buffers.write(side, '.js', '},\n', this.line);
+            data += streamBuff.getContentsAsString("utf8");
+            data += '},\n';
+
+            buffers.write(side, this.outputType, data, null, false);
         };
 
-        Template.prototype.printFooter = function (buffers, side, tabs) {
+        Template.prototype.printFooter = function (buffers, side) {
+            var data = '';
             if (this.attrs.hasOwnProperty('id')) {
-                buffers.write(side, '.js', '\n}));\n\n', -1);
+                data += '\n}));\n\n';
+
+                buffers.write(side, this.outputType, data, null, false);
             }
         };
         return Template;
@@ -374,8 +539,8 @@ else
 
     var Client = (function (_super) {
         __extends(Client, _super);
-        function Client(parser, name, attrs) {
-            _super.call(this, parser, name, attrs);
+        function Client(parser, name, attrs, filename) {
+            _super.call(this, parser, name, attrs, filename);
             this.elementRules = {
                 handler: Handler,
                 include: Include,
@@ -387,17 +552,17 @@ else
             };
             this.name = 'client';
         }
-        Client.prototype.print = function (buffers, side, tabs) {
+        Client.prototype.print = function (buffers, side) {
             if (options.client || (!options.client && !options.server))
-                Element.prototype.print.call(this, buffers, SideType.CLIENT, tabs);
+                Element.prototype.print.call(this, buffers, SideType.CLIENT);
         };
         return Client;
     })(Element);
 
     var Handler = (function (_super) {
         __extends(Handler, _super);
-        function Handler(parser, name, attrs) {
-            _super.call(this, parser, name, attrs);
+        function Handler(parser, name, attrs, filename) {
+            _super.call(this, parser, name, attrs, filename);
             this.elementRules = {
                 on: On,
                 bind: Bind,
@@ -406,42 +571,55 @@ else
             this.name = 'handler';
         }
         Handler.prototype.printHeader = function (buffers, side) {
-            buffers.write(side, '.js', 'application.addHandler(\"', this.line);
-            buffers.write(side, '.js', this.attrs.url, this.line);
-            buffers.write(side, '.js', '\", Object.create(Handler.prototype, {\n', this.line);
-            buffers.write(side, '.js', 'url : { value: \"', this.line);
-            buffers.write(side, '.js', this.attrs.url, this.line);
-            buffers.write(side, '.js', '\"},\n', this.line);
+            var data = '';
+
+            data += 'application.addHandler(\"';
+            data += this.attrs.url;
+            data += '\", Object.create(Handler.prototype, {\n';
+            data += 'url : { value: \"';
+            data += this.attrs.url;
+            data += '\"},\n';
+
             if (this.attrs.type) {
-                buffers.write(side, '.js', 'contentType : { value: \"', this.line);
-                buffers.write(side, '.js', this.attrs.type, this.line);
-                buffers.write(side, '.js', '\"},\n', this.line);
+                data += 'contentType : { value: \"';
+                data += this.attrs.type;
+                data += '\"},\n';
             }
+
+            buffers.write(side, this.outputType, data, null, false);
         };
 
-        Handler.prototype.printFooter = function (buffers, side, tabs) {
-            buffers.write(side, '.js', '\n}));\n\n', -1);
+        Handler.prototype.printFooter = function (buffers, side) {
+            var data = '';
+
+            data += '\n}));\n\n';
+
+            buffers.write(side, this.outputType, data, null, false);
         };
         return Handler;
     })(Element);
 
     var Bind = (function (_super) {
         __extends(Bind, _super);
-        function Bind(parser, name, attrs) {
-            _super.call(this, parser, name, attrs);
+        function Bind(parser, name, attrs, filename) {
+            _super.call(this, parser, name, attrs, filename);
             this.elementRules = {};
             this.name = 'bind';
         }
-        Bind.prototype.printBody = function (buffers, side, tabs) {
-            buffers.write(side, '.js', 'application.addObserver(' + this.attrs.data + ', ' + this.attrs.with + ');\n', this.line);
+        Bind.prototype.printBody = function (buffers, side) {
+            var data = '';
+
+            data += 'application.addObserver(' + this.attrs.data + ', ' + this.attrs.with + ');\n';
+
+            buffers.write(side, this.outputType, data, null, false);
         };
         return Bind;
     })(Element);
 
     var Server = (function (_super) {
         __extends(Server, _super);
-        function Server(parser, name, attrs) {
-            _super.call(this, parser, name, attrs);
+        function Server(parser, name, attrs, filename) {
+            _super.call(this, parser, name, attrs, filename);
             this.elementRules = {
                 handler: Handler,
                 include: Include,
@@ -453,17 +631,17 @@ else
             };
             this.name = 'server';
         }
-        Server.prototype.print = function (buffers, side, tabs) {
+        Server.prototype.print = function (buffers, side) {
             if (options.server || (!options.client && !options.server))
-                Element.prototype.print.call(this, buffers, SideType.SERVER, tabs);
+                Element.prototype.print.call(this, buffers, SideType.SERVER);
         };
         return Server;
     })(Element);
 
     var Application = (function (_super) {
         __extends(Application, _super);
-        function Application(parser, name, attrs) {
-            _super.call(this, parser, name, attrs);
+        function Application(parser, name, attrs, filename) {
+            _super.call(this, parser, name, attrs, filename);
             this.elementRules = {
                 client: Client,
                 handler: Handler,
@@ -481,8 +659,8 @@ else
 
     var Roots = (function (_super) {
         __extends(Roots, _super);
-        function Roots(parser, name, attrs) {
-            _super.call(this, parser, name, attrs);
+        function Roots(parser, name, attrs, filename) {
+            _super.call(this, parser, name, attrs, filename);
             this.elementRules = {
                 application: Application
             };
@@ -524,16 +702,16 @@ else
     */
     function doNextDocument() {
         if (options.inputs.length) {
-            doParseDocument(options.inputs.shift(), doNextDocument, 0);
+            doParseDocument(options.inputs.shift(), doNextDocument);
         }
     }
 
-    function doParseDocument(filename, callback, tabs) {
+    function doParseDocument(filename, callback) {
         var parser = new expat.Parser('UTF-8');
         parser.currentElement = null;
         parser.currentText = '';
 
-        parser.roots = new Roots(parser, 'roots', null);
+        parser.roots = new Roots(parser, 'roots', null, filename);
 
         parser.filename = filename;
         parser.elements = [parser];
@@ -547,7 +725,8 @@ else
             this.elements.splice(index, 1);
             if (this.elements.length == 0) {
                 var buffers = new BufferManager();
-                this.currentElement.print(buffers, SideType.BOTH, tabs);
+                this.currentElement.print(buffers, SideType.BOTH);
+
                 if (callback)
                     callback(buffers);
             }
@@ -559,7 +738,7 @@ else
             console.log(parser.filename + ':' + parser.getCurrentLineNumber() + ': error:' + e);
         });
         parser.addListener('startElement', function (name, attrs) {
-            this.currentElement.processElement(parser, name, attrs, parser.getCurrentLineNumber());
+            this.currentElement.processElement(parser, name, attrs, filename);
         });
         parser.addListener('endElement', function (name) {
             this.currentElement.stop(parser, name);
@@ -568,9 +747,10 @@ else
             this.currentText += s;
         });
         parser.addListener('end', function () {
-            this.currentElement.prepare(parser, tabs);
+            this.currentElement.prepare(parser);
             parser.dequeue(parser);
         });
+
         console.log('# parsing ' + parser.filename);
         parser.input = fs.createReadStream(parser.filename);
         parser.input.pipe(parser);
@@ -612,6 +792,12 @@ else
         }
     }
 
+    function getDataFromSourceMap(sourceMap, side, type) {
+        if (typeof sourceMap[type] === 'undefined' || typeof sourceMap[type][side] === 'undefined')
+            return ('');
+        return (JSON.stringify(sourceMap[type][side].toStringWithSourceMap({ file: ['.webkool.wk'] }).map));
+    }
+
     function createFilesForSide(side, buffers, name) {
         if (side == SideType.BOTH) {
             createFilesForSide(SideType.SERVER, buffers, ((name.length == 0) ? ('') : (name + '.')) + 'server');
@@ -622,9 +808,16 @@ else
                 if (buff[i].side == side && (buff[i].name == '.js' || buff[i].name == '.css')) {
                     var fileName = name + buff[i].name;
                     var outputStream = fs.createWriteStream(fileName);
+                    var outputStreamMap = fs.createWriteStream(fileName + '.map');
 
-                    console.log('#saving in file ' + name + buff[i].name);
-                    outputStream.write(buff[i].data.join(''));
+                    var txt = buffers.toString(side, buff[i].name);
+                    var sourceMap = buffers.toSourceMap(side, buff[i].name, 'index.wk');
+
+                    console.log('#saving in file ' + fileName);
+                    console.log('#saving in file ' + fileName + '.map');
+                    outputStream.write(txt);
+
+                    outputStreamMap.write(sourceMap.toString());
                 }
             }
         }
@@ -636,19 +829,21 @@ else
             joinBuffers(SideType.CLIENT, buffers);
         } else {
             for (var eng in styleSheetEngine) {
-                if (eng != 'css')
-                    var engBuffer = buffers.get(side, '.' + eng, false);
-                if (engBuffer) {
+                if (eng != 'css') {
                     var streamBuff = new sbuff.WritableStreamBuffer();
-                    styleSheetEngine[eng].compile(engBuffer.data.join(''), streamBuff);
-                    var line = buffers.get(side, '.css', true).data.length;
-                    buffers.write(side, '.css', streamBuff.getContentsAsString("utf8"), line);
+                    var inp = buffers.toString(side, '.' + eng);
+
+                    if (inp != '') {
+                        styleSheetEngine[eng].compile(inp, streamBuff);
+                        var line = buffers.get(side, '.css', true).data.length;
+                        buffers.write(side, '.css', streamBuff.getContentsAsString("utf8"), null, false);
+                    }
                 }
             }
 
             if (side == SideType.SERVER) {
                 var line = buffers.get(SideType.SERVER, '.js', true).data.length;
-                buffers.write(SideType.SERVER, '.js', '\napplication.start();\n', line);
+                buffers.write(SideType.SERVER, '.js', '\napplication.start();\n', null, false);
             }
         }
     }
@@ -661,14 +856,12 @@ else
         checkWebKoolWkFileExistence();
 
         //begin the parsing of .webkool.wk
-        var tabs = 0;
         doParseDocument('.webkool.wk', function (initialBuffers) {
             var _buffers = initialBuffers;
 
             //parse the entry point (index.wk for example)
             doParseDocument(options.inputs.shift(), function (buffers) {
-                //merge buffers created by .webkool.wk and the entry point
-                _buffers.merge(SideType.BOTH, buffers, 1, 0);
+                _buffers.merge(SideType.BOTH, buffers, 0);
 
                 //process some operation over buffer
                 joinBuffers(SideType.BOTH, _buffers);
@@ -679,8 +872,8 @@ else
                     createFilesForSide(SideType.SERVER, _buffers, (options.output.length == 0 ? 'server' : options.output));
                 if ((options.server && options.client) || (!options.server && !options.client))
                     createFilesForSide(SideType.BOTH, _buffers, options.output);
-            }, 1);
-        }, 0);
+            });
+        });
     }
     Webkool.run = run;
 })(Webkool || (Webkool = {}));

@@ -97,6 +97,7 @@ class Context {
 					}
 					catch (e) {
 						console.log(e.toString());
+						console.log(e.stack);
 					}
 				}
 				else {
@@ -300,7 +301,7 @@ class Application {
 			l = params.length;
 			for (i = 0; i < l; i += 1) {
 				param = params[i].split('=');
-				if (param.length == 2) 															//patch
+				if (param.length == 2) 															
 					query[param[0]] = decodeURIComponent(param[1]);
 			}
 		}

@@ -6,7 +6,6 @@
 	<client>
 	</client>
 	<server>
-
 		<handler url="/" type="text/html">
 			<on id="request">
 				plop = 2;
@@ -50,11 +49,18 @@
 
 	<stylesheet type="less">
 		<![CDATA[
-			@size: 	2px;
+			@size: 	4px;
 			h1 {
 				background: 	#414141;
 				color: 			white;
 				border: 		@size;
+			}
+		]]>
+	</stylesheet>
+	<stylesheet type="less">
+		<![CDATA[
+			body {
+				color: 	#ff0000;
 			}
 		]]>
 	</stylesheet>
