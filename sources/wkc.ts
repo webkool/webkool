@@ -35,6 +35,25 @@ function epurString(str) {
 	return str.replace(/^\s*$/, '');
 }
 
+function sanitize(str) {
+	var res = '';
+	
+	str.split('\n').forEach(function (itm, idx, col) {
+		if (!((idx == 0 || idx == col.length - 1) && epurString(itm) == ''))
+			res += itm + '\n';
+	});
+	return (res);
+}
+
+function printHintErrors(errors, location) {
+	console.log('\n#### -- ERRORS in file <' + location.file + '> -- ####');
+	errors.forEach(function (itm) {
+		console.log(itm.id, itm.code, itm.reason, 'in file', '<' + location.file + '>', '(' + (location.line + itm.line) + ', ' + itm.character + ')')
+	});
+	console.log();
+}
+
+
 module Webkool {
 	'use strict';
 	
@@ -42,7 +61,7 @@ module Webkool {
 	** Template and Css Engine
 	*/
 	
-	var version = '0.1.4'; 						//current version
+	var version = '0.1.6'; 						//current version
 
 	var templateEngine = {
 		'square':	require('../lib/square'), 	//internal square templating module
@@ -62,6 +81,7 @@ module Webkool {
 	var expat 	= require('node-expat'); 		//parser
 	var sm 		= require('source-map');	 	//source mapping
 	var sbuff 	= require('stream-buffers'); 	//utils buffers
+	var hint	= require('jshint').JSHINT; 	//output syntax validation
 	var fs 		= require('fs'); 				//filesystem access
 
 	var outputJS,
@@ -478,6 +498,10 @@ module Webkool {
 			var middle 	= this.text;
 			var end 	= '}},\n';
 
+
+			//needed a jshint validation
+			if (hint(sanitize(middle)) == false)
+				printHintErrors(hint.data().errors, this.location);
 			buffers.write(side, this.outputType, begin, null, false);
 			buffers.write(side, this.outputType, middle, this.location, true);
 			buffers.write(side, this.outputType, end, null, false);
@@ -518,10 +542,11 @@ module Webkool {
 		}
 
 		printBody(buffers: BufferManager, side: SideType) {
-			var data = '';
+			var data = this.text;
 
-			data += this.text;
-
+			//needed a jshint validation
+			if (hint(sanitize(data)) == false)
+				printHintErrors(hint.data().errors, this.location);
 			buffers.write(side, this.outputType, data, this.location, true);
 		}
 	}

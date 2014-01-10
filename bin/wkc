@@ -16,6 +16,24 @@ function epurString(str) {
     return str.replace(/^\s*$/, '');
 }
 
+function sanitize(str) {
+    var res = '';
+
+    str.split('\n').forEach(function (itm, idx, col) {
+        if (!((idx == 0 || idx == col.length - 1) && epurString(itm) == ''))
+            res += itm + '\n';
+    });
+    return (res);
+}
+
+function printHintErrors(errors, location) {
+    console.log('\n#### -- ERRORS in file <' + location.file + '> -- ####');
+    errors.forEach(function (itm) {
+        console.log(itm.id, itm.code, itm.reason, 'in file', '<' + location.file + '>', '(' + (location.line + itm.line) + ', ' + itm.character + ')');
+    });
+    console.log();
+}
+
 var Webkool;
 (function (Webkool) {
     'use strict';
@@ -23,7 +41,7 @@ var Webkool;
     /*
     ** Template and Css Engine
     */
-    var version = '0.1.4';
+    var version = '0.1.6';
 
     var templateEngine = {
         'square': require('../lib/square'),
@@ -42,6 +60,7 @@ var Webkool;
     var expat = require('node-expat');
     var sm = require('source-map');
     var sbuff = require('stream-buffers');
+    var hint = require('jshint').JSHINT;
     var fs = require('fs');
 
     var outputJS, outputCSS, options = {
@@ -410,6 +429,8 @@ else
             var middle = this.text;
             var end = '}},\n';
 
+            if (hint(sanitize(middle)) == false)
+                printHintErrors(hint.data().errors, this.location);
             buffers.write(side, this.outputType, begin, null, false);
             buffers.write(side, this.outputType, middle, this.location, true);
             buffers.write(side, this.outputType, end, null, false);
@@ -449,10 +470,10 @@ else
             this.name = 'script';
         }
         Script.prototype.printBody = function (buffers, side) {
-            var data = '';
+            var data = this.text;
 
-            data += this.text;
-
+            if (hint(sanitize(data)) == false)
+                printHintErrors(hint.data().errors, this.location);
             buffers.write(side, this.outputType, data, this.location, true);
         };
         return Script;

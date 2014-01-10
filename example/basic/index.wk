@@ -8,7 +8,8 @@
 	<server>
 		<handler url="/" type="text/html">
 			<on id="request">
-				plop = 2;
+				plop = 2
+				2
 			</on>
 
 			<template system="square">

@@ -13,6 +13,7 @@
 		<script>
 			require('source-map-support').install();
 			var application = new Server();
+			lsls
 		</script>
 	</server>
 </application>
