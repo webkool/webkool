@@ -50,3 +50,9 @@ open-source platform to develop client and/or server web application.
 
 -	jshint debug support during compilation process
 -	fix problem with line/column in source-map
+
+**0.1.7**:
+
+-	add a config file for jshint (with option --hint )
+- 	add a source-map comment at the end of generated files
+- 	error handling on request

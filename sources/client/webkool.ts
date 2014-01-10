@@ -96,8 +96,7 @@ class Context {
 						}
 					}
 					catch (e) {
-						console.log(e.toString());
-						console.log(e.stack);
+						throw e;
 					}
 				}
 				else {
@@ -462,7 +461,6 @@ class Server extends Application {
 						buffer = Buffer.concat([buffer, data]);
 					});
 					part.on('end', function() {
-						/*jshint -W069 */
 						query['data'] = buffer;
 					});
 					part.on('error', function(e) {

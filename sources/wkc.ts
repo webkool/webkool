@@ -61,7 +61,7 @@ module Webkool {
 	** Template and Css Engine
 	*/
 	
-	var version = '0.1.6'; 						//current version
+	var version = '0.1.7'; 						//current version
 
 	var templateEngine = {
 		'square':	require('../lib/square'), 	//internal square templating module
@@ -81,7 +81,7 @@ module Webkool {
 	var expat 	= require('node-expat'); 		//parser
 	var sm 		= require('source-map');	 	//source mapping
 	var sbuff 	= require('stream-buffers'); 	//utils buffers
-	var hint	= require('jshint').JSHINT; 	//output syntax validation
+	var jshint	= require('jshint').JSHINT; 	//output syntax validation
 	var fs 		= require('fs'); 				//filesystem access
 
 	var outputJS,
@@ -93,6 +93,7 @@ module Webkool {
 			includes: 	[__dirname + '/../lib/client/', './'],
 			inputs: 	[],
 			output: 	'',
+			jshint: 	''
 		};
 
 	enum	SideType { 							//compilation sides
@@ -100,6 +101,9 @@ module Webkool {
 		SERVER,
 		CLIENT
 	};
+
+
+
 
 	/*
 	**	BufferManager
@@ -447,6 +451,7 @@ module Webkool {
 		public prepare(parser) {
 			var element = this;
 			var filename = getPath(this.attrs.href);
+
 			var extension = '.' + filename.split('.').pop();
 
 			console.log('# including ' + this.attrs.href);
@@ -500,9 +505,8 @@ module Webkool {
 			var end 	= '}},\n';
 
 
-			//needed a jshint validation
-			if (hint(sanitize(middle)) == false)
-				printHintErrors(hint.data().errors, this.location);
+			hint(sanitize(middle), this.location)
+			
 			buffers.write(side, this.outputType, begin, null, false);
 			buffers.write(side, this.outputType, middle, this.location, true);
 			buffers.write(side, this.outputType, end, null, false);
@@ -545,9 +549,8 @@ module Webkool {
 		printBody(buffers: BufferManager, side: SideType) {
 			var data = this.text;
 
-			//needed a jshint validation
-			if (hint(sanitize(data)) == false)
-				printHintErrors(hint.data().errors, this.location);
+			hint(sanitize(data), this.location)
+
 			buffers.write(side, this.outputType, data, this.location, true);
 		}
 	}
@@ -559,8 +562,8 @@ module Webkool {
 
 		constructor(parser, name, attrs, filename) {
 			super(parser, name, attrs, filename);
-			if (this.attrs.hasOwnProperty('type') && styleSheetEngine.hasOwnProperty(this.attrs.type))
-				this.outputType = '.' + this.attrs.type;
+			if (this.attrs.hasOwnProperty('system') && styleSheetEngine.hasOwnProperty(this.attrs.system))
+				this.outputType = '.' + this.attrs.system;
 		}
 		
 		printBody(buffers: BufferManager, side: SideType) {
@@ -776,12 +779,13 @@ module Webkool {
 				.alias('s', 'server')
 				.alias('v', 'version')
 				.boolean(['server', 'client', 'version'])
-				.string('o', 'i')
+				.string('o', 'i', 'hint')
 				.describe('c', 'compile for client')
 				.describe('s', 'compile for server')
 				.describe('i', 'include directory')
 				.describe('v', 'print the current version')
 				.describe('o', 'output basename')
+				.describe('hint', 'hint configuration')
 				.usage('$0' + ' version ' + version)
 				.demand('_')
 				.argv;
@@ -795,11 +799,20 @@ module Webkool {
 			else
 				options.includes.push(argv.i);
 		}
+		if (argv.hint) {
+			if (argv.hint instanceof Array)
+				options.jshint = loadJsHintFile(argv.hint[0]);
+			else
+				options.jshint = loadJsHintFile(argv.hint);
+		}
+		else
+			options.jshint = loadJsHintFile(null);
 		if (argv.v) {
 			console.log('version: ' + version);
 		}
 		if (argv.o)
 			options.output = (argv.o instanceof Array) ? (argv.o.splice(-1)) : (argv.o);
+
 
 		argv._.forEach(function (elm) { options.inputs.push(elm) });
 	}
@@ -808,6 +821,27 @@ module Webkool {
 	/*
 	** parsing entry point and utils
 	*/
+
+	function loadJsHintFile(file) {
+		var data = '';
+		try {
+			if (file == null) { throw Error('default file') }
+			data = fs.readFileSync(file, 'utf-8')
+		}
+		catch (err) {
+			console.log('using default jshint config file');
+			try {
+				data = fs.readFileSync(__dirname + '/../sources/templates/jshint.json', 'utf-8')
+			} catch (e) { data = '' }
+
+		}
+		return (JSON.parse(data));
+	}
+
+	function hint(chunk, location) {
+		if (jshint(chunk, options.jshint) == false)
+			printHintErrors(jshint.data().errors, location);
+	}
 
 
 	function doNextDocument() {		
@@ -860,7 +894,7 @@ module Webkool {
 			parser.dequeue(parser);
 		});
 		
-		console.log('# parsing ' + parser.filename);
+		console.log('# parsing ' + parser.filename.split('/').pop());
 		parser.input = fs.createReadStream(parser.filename);
 		parser.input.pipe(parser);
 	}
@@ -929,6 +963,7 @@ module Webkool {
 					console.log('#saving in file ' + fileName);
 					console.log('#saving in file ' + fileName + '.map');
 					outputStream.write(txt);
+					outputStream.write('//# sourceMappingURL=' + fileName + '.map');
 
 					outputStreamMap.write(sourceMap.toString());
 				}

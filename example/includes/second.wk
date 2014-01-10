@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<application xmlns="http://www.webkool.net/1.0/">
+
+	<stylesheet type='less'><![CDATA[
+		@x: 2;
+		h3 {
+			border: 	@x solid black;
+		}
+		]]>
+	</stylesheet>
+</application>

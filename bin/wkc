@@ -41,7 +41,7 @@ var Webkool;
     /*
     ** Template and Css Engine
     */
-    var version = '0.1.6';
+    var version = '0.1.7';
 
     var templateEngine = {
         'square': require('../lib/square'),
@@ -60,7 +60,7 @@ var Webkool;
     var expat = require('node-expat');
     var sm = require('source-map');
     var sbuff = require('stream-buffers');
-    var hint = require('jshint').JSHINT;
+    var jshint = require('jshint').JSHINT;
     var fs = require('fs');
 
     var outputJS, outputCSS, options = {
@@ -69,7 +69,8 @@ var Webkool;
         target: {},
         includes: [__dirname + '/../lib/client/', './'],
         inputs: [],
-        output: ''
+        output: '',
+        jshint: ''
     };
 
     var SideType;
@@ -381,6 +382,7 @@ else
         Include.prototype.prepare = function (parser) {
             var element = this;
             var filename = getPath(this.attrs.href);
+
             var extension = '.' + filename.split('.').pop();
 
             console.log('# including ' + this.attrs.href);
@@ -430,8 +432,8 @@ else
             var middle = this.text;
             var end = '}},\n';
 
-            if (hint(sanitize(middle)) == false)
-                printHintErrors(hint.data().errors, this.location);
+            hint(sanitize(middle), this.location);
+
             buffers.write(side, this.outputType, begin, null, false);
             buffers.write(side, this.outputType, middle, this.location, true);
             buffers.write(side, this.outputType, end, null, false);
@@ -473,8 +475,8 @@ else
         Script.prototype.printBody = function (buffers, side) {
             var data = this.text;
 
-            if (hint(sanitize(data)) == false)
-                printHintErrors(hint.data().errors, this.location);
+            hint(sanitize(data), this.location);
+
             buffers.write(side, this.outputType, data, this.location, true);
         };
         return Script;
@@ -487,8 +489,8 @@ else
             this.elementRules = {};
             this.name = 'stylesheet';
             this.type = 'css';
-            if (this.attrs.hasOwnProperty('type') && styleSheetEngine.hasOwnProperty(this.attrs.type))
-                this.outputType = '.' + this.attrs.type;
+            if (this.attrs.hasOwnProperty('system') && styleSheetEngine.hasOwnProperty(this.attrs.system))
+                this.outputType = '.' + this.attrs.system;
         }
         Stylesheet.prototype.printBody = function (buffers, side) {
             var data = '';
@@ -695,7 +697,7 @@ else
     ** Parse Arguments
     */
     function doParseArguments(options) {
-        var argv = require('optimist').alias('c', 'client').alias('s', 'server').alias('v', 'version').boolean(['server', 'client', 'version']).string('o', 'i').describe('c', 'compile for client').describe('s', 'compile for server').describe('i', 'include directory').describe('v', 'print the current version').describe('o', 'output basename').usage('$0' + ' version ' + version).demand('_').argv;
+        var argv = require('optimist').alias('c', 'client').alias('s', 'server').alias('v', 'version').boolean(['server', 'client', 'version']).string('o', 'i', 'hint').describe('c', 'compile for client').describe('s', 'compile for server').describe('i', 'include directory').describe('v', 'print the current version').describe('o', 'output basename').describe('hint', 'hint configuration').usage('$0' + ' version ' + version).demand('_').argv;
 
         options.server = argv.server;
         options.client = argv.client;
@@ -708,6 +710,13 @@ else
 else
                 options.includes.push(argv.i);
         }
+        if (argv.hint) {
+            if (argv.hint instanceof Array)
+                options.jshint = loadJsHintFile(argv.hint[0]);
+else
+                options.jshint = loadJsHintFile(argv.hint);
+        } else
+            options.jshint = loadJsHintFile(null);
         if (argv.v) {
             console.log('version: ' + version);
         }
@@ -722,6 +731,29 @@ else
     /*
     ** parsing entry point and utils
     */
+    function loadJsHintFile(file) {
+        var data = '';
+        try  {
+            if (file == null) {
+                throw Error('default file');
+            }
+            data = fs.readFileSync(file, 'utf-8');
+        } catch (err) {
+            console.log('using default jshint config file');
+            try  {
+                data = fs.readFileSync(__dirname + '/../sources/templates/jshint.json', 'utf-8');
+            } catch (e) {
+                data = '';
+            }
+        }
+        return (JSON.parse(data));
+    }
+
+    function hint(chunk, location) {
+        if (jshint(chunk, options.jshint) == false)
+            printHintErrors(jshint.data().errors, location);
+    }
+
     function doNextDocument() {
         if (options.inputs.length) {
             doParseDocument(options.inputs.shift(), doNextDocument);
@@ -773,7 +805,7 @@ else
             parser.dequeue(parser);
         });
 
-        console.log('# parsing ' + parser.filename);
+        console.log('# parsing ' + parser.filename.split('/').pop());
         parser.input = fs.createReadStream(parser.filename);
         parser.input.pipe(parser);
     }
@@ -838,6 +870,7 @@ else
                     console.log('#saving in file ' + fileName);
                     console.log('#saving in file ' + fileName + '.map');
                     outputStream.write(txt);
+                    outputStream.write('//# sourceMappingURL=' + fileName + '.map');
 
                     outputStreamMap.write(sourceMap.toString());
                 }

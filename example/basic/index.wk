@@ -8,8 +8,7 @@
 	<server>
 		<handler url="/" type="text/html">
 			<on id="request">
-				plop = 2
-				2
+				model.plop = 2;
 			</on>
 
 			<template system="square">
@@ -27,8 +26,6 @@
 			<on id="render">
 				var css = require('fs').readFileSync('plop.client.css');
 				return (css.toString());
-
-				x = y;
 			</on>
 		</handler>
 	
@@ -50,7 +47,7 @@
 		]]>
 	</template>
 
-	<stylesheet type="less">
+	<stylesheet system="less">
 		<![CDATA[
 			@size: 	4px;
 			h1 {
@@ -60,14 +57,14 @@
 			}
 		]]>
 	</stylesheet>
-	<stylesheet type="less">
+	<stylesheet system="less">
 		<![CDATA[
 			body {
 				color: 	#ff0000;
 			}
 		]]>
 	</stylesheet>
-	<stylesheet type="sass">
+	<stylesheet system="sass">
 		<![CDATA[
 			$size: 	1px;
 			h2 {
@@ -77,7 +74,7 @@
 			}
 		]]>
 	</stylesheet>
-	<stylesheet type="css">
+	<stylesheet system="css">
 		<![CDATA[
 			h3 {
 				border: 		1px;

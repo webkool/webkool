@@ -381,7 +381,7 @@ module Square {
 			//
 			stream.write('}');
 			stream.write('catch (e) {');
-			stream.write('return (e); }');
+			stream.write('throw e; }');
 			carriageReturn(stream, -1);
 			stream.write('}');
 			carriageReturn(stream, -1);

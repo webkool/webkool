@@ -3,13 +3,10 @@
 
 	<property id="name">test</property>
 	<property id="port">4242</property>
-	<client>
-		<include href='client_inc.wk' />
-		<include href='client_inc.css' />
-	</client>
+
+	<include href='second.wk' />
+
 	<server>
-		<include href='server_inc.wk' />
-		<include href='server_inc.css' />
 		<handler url="/" type="text/html">
 			<template system="square">
 				<![CDATA[
