@@ -24,7 +24,7 @@ open-source platform to develop client and/or server web application.
 
 **0.1.1**:
 
--   add './' and '../lib/client' to the default include path
+-   add './' and s'../lib/client' to the default include path
 
 **0.1.2**:
 

@@ -293,9 +293,10 @@ module Webkool {
 		public profoundToString(data) {
 			var output = ''
 
+			var _this = this;
 			data.forEach(function (elm) {
 				if (elm.data instanceof Array)
-					output += this.profoundToString(elm.data);
+					output += _this.profoundToString(elm.data);
 				else
 					output += elm.data;
 			});

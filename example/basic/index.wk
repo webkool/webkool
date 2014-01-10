@@ -27,6 +27,8 @@
 			<on id="render">
 				var css = require('fs').readFileSync('plop.client.css');
 				return (css.toString());
+
+				x = y;
 			</on>
 		</handler>
 	
