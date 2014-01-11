@@ -2,8 +2,6 @@
   "undef": true,
   "unused": false,
   "predef":	[
-  	"Application", "Server",
-  	"require", 
-  	"context", "model", "query", "result"
+  	"require"
   ]
 }

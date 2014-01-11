@@ -1,3 +1,11 @@
+
+/*
+	on_render ---> doRender using model.json()
+	include dans model un access au dom (notre propre getElementById)
+*/
+
+
+
 declare var Buffer;
 declare var application;
 declare var require;

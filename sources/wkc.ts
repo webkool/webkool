@@ -45,13 +45,7 @@ function sanitize(str) {
 	return (res);
 }
 
-function printHintErrors(errors, location) {
-	console.log('\n#### -- ERRORS in file <' + location.file + '> -- ####');
-	errors.forEach(function (itm) {
-		console.log(itm.id, itm.code, itm.reason, 'in file', '<' + location.file + '>', '(' + (location.line + itm.line) + ', ' + itm.character + ')')
-	});
-	console.log();
-}
+
 
 
 module Webkool {
@@ -103,7 +97,23 @@ module Webkool {
 	};
 
 
+	function printHintErrors(errors, sourceMap) {
+		var smc = new sm.SourceMapConsumer(sourceMap);
 
+		errors.forEach(function (itm) {
+			if (itm == null)
+				console.log('to many Errors, please fix your code');
+			else {
+				var location = smc.originalPositionFor({
+		  			line: 	itm.line,
+			  		column: itm.character
+				});
+				if (location.line != null)
+					console.log(itm.id, itm.code, itm.reason, 'in file', '<' + location.source + '>', '(' + location.line + ', ' + location.column + ')');
+			}
+		});
+
+	}
 
 	/*
 	**	BufferManager
@@ -505,7 +515,7 @@ module Webkool {
 			var end 	= '}},\n';
 
 
-			hint(sanitize(middle), this.location)
+//			hint(sanitize(middle), this.location)
 			
 			buffers.write(side, this.outputType, begin, null, false);
 			buffers.write(side, this.outputType, middle, this.location, true);
@@ -549,7 +559,7 @@ module Webkool {
 		printBody(buffers: BufferManager, side: SideType) {
 			var data = this.text;
 
-			hint(sanitize(data), this.location)
+//			hint(sanitize(data), this.location)
 
 			buffers.write(side, this.outputType, data, this.location, true);
 		}
@@ -838,9 +848,12 @@ module Webkool {
 		return (JSON.parse(data));
 	}
 
-	function hint(chunk, location) {
-		if (jshint(chunk, options.jshint) == false)
-			printHintErrors(jshint.data().errors, location);
+	function hint(chunk, sourceMap) {
+		if (jshint(chunk, options.jshint) == false) {
+			console.log('###################');
+			printHintErrors(jshint.data().errors, sourceMap);
+			console.log('###################');
+		}
 	}
 
 
@@ -965,7 +978,13 @@ module Webkool {
 					outputStream.write(txt);
 					outputStream.write('//# sourceMappingURL=' + fileName + '.map');
 
-					outputStreamMap.write(sourceMap.toString());
+					var sourceMapGenerated = sourceMap.toString();
+					outputStreamMap.write(sourceMapGenerated);
+
+					//jshint step
+					if (buff[i].name == '.js') {
+						hint(txt, JSON.parse(sourceMapGenerated));
+					}
 				}
 			}
 		}
