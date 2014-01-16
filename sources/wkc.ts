@@ -11,8 +11,8 @@
 		-la fonction de print de ON a ete modifie pour faire des tests/
 
 	todo:
-		-patcher builSourceNode
-		-etre plus precis sur le sourcemap
+		- checker les attributes de chaque tag
+		- coriger le code jshint
 
 */
 
@@ -22,14 +22,12 @@ declare var process;
 declare var require;
 declare var __dirname;
 
-
 function printTabs(nbr) {
 	var str = '';
 	for (var i = 0; i < nbr; i++)
 		str += '\t';
 	return (str);
 }
-
 
 function epurString(str) {
 	return str.replace(/^\s*$/, '');
@@ -357,6 +355,7 @@ module Webkool {
 
 
 	class Element {
+		elementAttrs;
 		elementRules;
 		location;
 		parent;
@@ -382,6 +381,7 @@ module Webkool {
 				parser.currentElement.processText(parser);
 				parser.currentElement.children.push(this);
 			}
+
 			this.parent 			= parser.currentElement;
 			this.children 			= [];
 			this.name 				= name;
@@ -389,7 +389,16 @@ module Webkool {
 			this.text 				= '';
 			this.outputType 		= '.js';
 			parser.currentElement 	= this;
+
 			
+		}
+
+		public checkAttrs(attrs, location, tagName) {
+			for (var name in attrs) {
+				if (this.elementAttrs.indexOf(name) == -1) {
+					throw Error('invalid attribute <' + name + '> (' + tagName + ') in file ' + location.file + ' (' + location.line + ':' + location.col + ')');
+				}
+			}
 		}
 
 		public stop(parser, name) {
@@ -398,14 +407,16 @@ module Webkool {
 		}
 
 		public prepare(parser) {
+			this.checkAttrs(this.attrs, this.location, this.name);
 			this.children.forEach(function(item) {
 				item.prepare(parser);
 			});
 		}
 
 		public processElement(parser, name, attrs) {
-			if (this.elementRules.hasOwnProperty(name))
+			if (this.elementRules.hasOwnProperty(name)) {
 				return new (this.elementRules[name])(parser, name, attrs, this.location.file);
+			}
 			parser.error('Element not found <' + name + '>');
 		}
 
@@ -413,7 +424,6 @@ module Webkool {
 			this.text += parser.currentText;
 			parser.currentText = '';
 		}
-
 
 		public		print(buffers: BufferManager, side: SideType) {
 			this.printHeader(buffers, side);
@@ -444,6 +454,7 @@ module Webkool {
 
 	class Include extends Element {
 		elementRules = {};
+		elementAttrs = ['href'];
 		name = 'include';
 		parser;
 		preparedBuffers;
@@ -459,6 +470,7 @@ module Webkool {
 		}
 
 		public prepare(parser) {
+			this.checkAttrs(this.attrs, this.location, this.name);
 			var element = this;
 			var filename = getPath(this.attrs.href);
 
@@ -503,6 +515,7 @@ module Webkool {
 
 	class On extends Element {
 		elementRules = {};
+		elementAttrs = ['id'];
 		name = 'on';
 
 		constructor(parser, name, attrs, filename) {
@@ -513,9 +526,6 @@ module Webkool {
 			var begin 	= 'on_' + this.attrs.id + ': { value: function(context, model, query, result) {';
 			var middle 	= this.text;
 			var end 	= '}},\n';
-
-
-//			hint(sanitize(middle), this.location)
 			
 			buffers.write(side, this.outputType, begin, null, false);
 			buffers.write(side, this.outputType, middle, this.location, true);
@@ -526,6 +536,7 @@ module Webkool {
 
 	class Property extends Element {
 		elementRules = {};
+		elementAttrs = ['id'];
 		name = 'property';
 
 		constructor(parser, name, attrs, filename) {
@@ -550,6 +561,7 @@ module Webkool {
 
 	class Script extends Element {
 		elementRules = {};
+		elementAttrs = [];
 		name = 'script';
 
 		constructor(parser, name, attrs, filename) {
@@ -559,14 +571,13 @@ module Webkool {
 		printBody(buffers: BufferManager, side: SideType) {
 			var data = this.text;
 
-//			hint(sanitize(data), this.location)
-
 			buffers.write(side, this.outputType, data, this.location, true);
 		}
 	}
 
 	class Stylesheet extends Element {
 		elementRules = {};
+		elementAttrs = ['system'];
 		name = 'stylesheet';
 		outputType = '.css';
 
@@ -587,6 +598,7 @@ module Webkool {
 
 	class Template extends Element {
 		elementRules = {};
+		elementAttrs = ['system', 'id'];
 		name = 'template';
 		templateName = 'square';
 
@@ -657,6 +669,7 @@ module Webkool {
 			stylesheet: Stylesheet,
 			template: 	Template
 		};
+		elementAttrs = [];
 		name = 'client';
 
 		constructor(parser, name, attrs, filename) {
@@ -675,6 +688,7 @@ module Webkool {
 			bind: Bind,
 			template: Template
 		};
+		elementAttrs = ['url', 'type'];
 		name = 'handler';
 
 		constructor(parser, name, attrs, filename) {
@@ -711,6 +725,7 @@ module Webkool {
 
 	class Bind extends Element {
 		elementRules = {};
+		elementAttrs = ['data', 'with'];
 		name = 'bind';
 
 		constructor(parser, name, attrs, filename) {
@@ -737,6 +752,7 @@ module Webkool {
 			stylesheet: Stylesheet,
 			template: 	Template,
 		};
+		elementAttrs = [];
 		name = 'server';
 
 		constructor(parser, name, attrs, filename) {
@@ -760,6 +776,7 @@ module Webkool {
 			stylesheet: Stylesheet,
 			template: 	Template,
 		};
+		elementAttrs = ['xmlns'];
 		name = 'application';
 
 		constructor(parser, name, attrs, filename) {
@@ -771,6 +788,7 @@ module Webkool {
 		elementRules = {
 			application: Application
 		};
+		elementAttrs = [];
 		name = 'roots';
 
 		constructor(parser, name, attrs, filename) {
@@ -903,8 +921,12 @@ module Webkool {
 			this.currentText += s;
 		});
 		parser.addListener('end', function() {
-			this.currentElement.prepare(parser);
-			parser.dequeue(parser);
+			try {
+				this.currentElement.prepare(parser);
+				parser.dequeue(parser);
+			} catch (err) {
+				console.log(err);
+			}
 		});
 		
 		console.log('# parsing ' + parser.filename.split('/').pop());

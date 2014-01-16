@@ -320,6 +320,7 @@ else
                 parser.currentElement.processText(parser);
                 parser.currentElement.children.push(this);
             }
+
             this.parent = parser.currentElement;
             this.children = [];
             this.name = name;
@@ -329,20 +330,30 @@ else
             parser.currentElement = this;
         };
 
+        Element.prototype.checkAttrs = function (attrs, location, tagName) {
+            for (var name in attrs) {
+                if (this.elementAttrs.indexOf(name) == -1) {
+                    throw Error('invalid attribute <' + name + '> (' + tagName + ') in file ' + location.file + ' (' + location.line + ':' + location.col + ')');
+                }
+            }
+        };
+
         Element.prototype.stop = function (parser, name) {
             this.processText(parser);
             parser.currentElement = this.parent;
         };
 
         Element.prototype.prepare = function (parser) {
+            this.checkAttrs(this.attrs, this.location, this.name);
             this.children.forEach(function (item) {
                 item.prepare(parser);
             });
         };
 
         Element.prototype.processElement = function (parser, name, attrs) {
-            if (this.elementRules.hasOwnProperty(name))
+            if (this.elementRules.hasOwnProperty(name)) {
                 return new (this.elementRules[name])(parser, name, attrs, this.location.file);
+            }
             parser.error('Element not found <' + name + '>');
         };
 
@@ -384,11 +395,13 @@ else
         function Include(parser, name, attrs, filename) {
             _super.call(this, parser, name, attrs, filename);
             this.elementRules = {};
+            this.elementAttrs = ['href'];
             this.name = 'include';
             this.parser = parser;
             this.preparedBuffers = new BufferManager();
         }
         Include.prototype.prepare = function (parser) {
+            this.checkAttrs(this.attrs, this.location, this.name);
             var element = this;
             var filename = getPath(this.attrs.href);
 
@@ -434,6 +447,7 @@ else
         function On(parser, name, attrs, filename) {
             _super.call(this, parser, name, attrs, filename);
             this.elementRules = {};
+            this.elementAttrs = ['id'];
             this.name = 'on';
         }
         On.prototype.printBody = function (buffers, side) {
@@ -441,7 +455,6 @@ else
             var middle = this.text;
             var end = '}},\n';
 
-            //			hint(sanitize(middle), this.location)
             buffers.write(side, this.outputType, begin, null, false);
             buffers.write(side, this.outputType, middle, this.location, true);
             buffers.write(side, this.outputType, end, null, false);
@@ -454,6 +467,7 @@ else
         function Property(parser, name, attrs, filename) {
             _super.call(this, parser, name, attrs, filename);
             this.elementRules = {};
+            this.elementAttrs = ['id'];
             this.name = 'property';
         }
         Property.prototype.printBody = function (buffers, side) {
@@ -478,12 +492,12 @@ else
         function Script(parser, name, attrs, filename) {
             _super.call(this, parser, name, attrs, filename);
             this.elementRules = {};
+            this.elementAttrs = [];
             this.name = 'script';
         }
         Script.prototype.printBody = function (buffers, side) {
             var data = this.text;
 
-            //			hint(sanitize(data), this.location)
             buffers.write(side, this.outputType, data, this.location, true);
         };
         return Script;
@@ -494,6 +508,7 @@ else
         function Stylesheet(parser, name, attrs, filename) {
             _super.call(this, parser, name, attrs, filename);
             this.elementRules = {};
+            this.elementAttrs = ['system'];
             this.name = 'stylesheet';
             this.outputType = '.css';
             if (this.attrs.hasOwnProperty('system') && styleSheetEngine.hasOwnProperty(this.attrs.system))
@@ -514,6 +529,7 @@ else
         function Template(parser, name, attrs, filename) {
             _super.call(this, parser, name, attrs, filename);
             this.elementRules = {};
+            this.elementAttrs = ['system', 'id'];
             this.name = 'template';
             this.templateName = 'square';
             if (this.attrs.hasOwnProperty('system') && templateEngine.hasOwnProperty(this.attrs.system))
@@ -581,6 +597,7 @@ else
                 stylesheet: Stylesheet,
                 template: Template
             };
+            this.elementAttrs = [];
             this.name = 'client';
         }
         Client.prototype.print = function (buffers, side) {
@@ -599,6 +616,7 @@ else
                 bind: Bind,
                 template: Template
             };
+            this.elementAttrs = ['url', 'type'];
             this.name = 'handler';
         }
         Handler.prototype.printHeader = function (buffers, side) {
@@ -635,6 +653,7 @@ else
         function Bind(parser, name, attrs, filename) {
             _super.call(this, parser, name, attrs, filename);
             this.elementRules = {};
+            this.elementAttrs = ['data', 'with'];
             this.name = 'bind';
         }
         Bind.prototype.printBody = function (buffers, side) {
@@ -660,6 +679,7 @@ else
                 stylesheet: Stylesheet,
                 template: Template
             };
+            this.elementAttrs = [];
             this.name = 'server';
         }
         Server.prototype.print = function (buffers, side) {
@@ -683,6 +703,7 @@ else
                 stylesheet: Stylesheet,
                 template: Template
             };
+            this.elementAttrs = ['xmlns'];
             this.name = 'application';
         }
         return Application;
@@ -695,6 +716,7 @@ else
             this.elementRules = {
                 application: Application
             };
+            this.elementAttrs = [];
             this.name = 'roots';
         }
         return Roots;
@@ -811,8 +833,12 @@ else
             this.currentText += s;
         });
         parser.addListener('end', function () {
-            this.currentElement.prepare(parser);
-            parser.dequeue(parser);
+            try  {
+                this.currentElement.prepare(parser);
+                parser.dequeue(parser);
+            } catch (err) {
+                console.log(err);
+            }
         });
 
         console.log('# parsing ' + parser.filename.split('/').pop());
