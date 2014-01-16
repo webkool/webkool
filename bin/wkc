@@ -495,7 +495,7 @@ else
             _super.call(this, parser, name, attrs, filename);
             this.elementRules = {};
             this.name = 'stylesheet';
-            this.type = 'css';
+            this.outputType = '.css';
             if (this.attrs.hasOwnProperty('system') && styleSheetEngine.hasOwnProperty(this.attrs.system))
                 this.outputType = '.' + this.attrs.system;
         }

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <application xmlns="http://www.webkool.net/1.0/">
-
+	
 	<property id="name">test</property>
 	<property id="port">4242</property>
 	<client>

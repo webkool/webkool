@@ -568,7 +568,7 @@ module Webkool {
 	class Stylesheet extends Element {
 		elementRules = {};
 		name = 'stylesheet';
-		type = 'css';
+		outputType = '.css';
 
 		constructor(parser, name, attrs, filename) {
 			super(parser, name, attrs, filename);
