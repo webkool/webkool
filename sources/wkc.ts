@@ -6,10 +6,11 @@
 		- ./square.js
 
 	todo:
-		-mettre a jour le README
-		-mettre a jour la version dans wkc.ts
+	√	-mettre a jour le README
+	√	-mettre a jour la version dans wkc.ts
 		-mettre au propre la partie example
 		-verifier
+		-supprimer todo
 		-publier
 
 */
@@ -52,7 +53,7 @@ module Webkool {
 	** Template and Css Engine
 	*/
 	
-	var version = '0.1.7'; 						//current version
+	var version = '0.2.0'; 						//current version
 
 	var templateEngine = {
 		'square':	require('../lib/square'), 	//internal square templating module
@@ -1016,7 +1017,10 @@ module Webkool {
 					var fileName  		= name + buff[i].name;
 					var outputStream  	= fs.createWriteStream(fileName);
 					var folder = options.output.substr(0, options.output.lastIndexOf('/'));
-					var outputStreamMap = fs.createWriteStream(folder + '/source-map/' + fileName.substr(fileName.lastIndexOf('/') + 1) + '.map');
+					if (folder.length > 0) {
+						folder += '/';
+					}
+					var outputStreamMap = fs.createWriteStream(folder + 'source-map/' + fileName.substr(fileName.lastIndexOf('/') + 1) + '.map');
 
 					var txt 		= buffers.toString(side, buff[i].name);
 					var sourceMap 	= buffers.toSourceMap(side, buff[i].name, fileName);
@@ -1069,9 +1073,11 @@ module Webkool {
 
 	function 	generateSourceMapFolder(where) {
 		var folder = where.substr(0, where.lastIndexOf('/'));
-
+		if (folder.length > 0) {
+			folder += '/';
+		}
 		try {
-			fs.mkdirSync(folder + '/source-map');
+			fs.mkdirSync(folder + 'source-map');
 		} catch (ignore) {}
 	}
 
@@ -1093,7 +1099,10 @@ module Webkool {
 		//create a .webkool.wk file if it doesn't exist.
 
 		var entryPoint = options.inputs.shift();
-		var rootPath = entryPoint.substr(0, entryPoint.lastIndexOf('/')) + '/';
+		var rootPath = entryPoint.substr(0, entryPoint.lastIndexOf('/'));
+		if (rootPath.length > 0) {
+			rootPath += '/';
+		}
 		var webkoolFile = rootPath + '.webkool.wk';
 
 		options.includes.push(rootPath);

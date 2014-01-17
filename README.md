@@ -12,10 +12,11 @@ open-source platform to develop client and/or server web application.
 
   options:
   
--   **-server** compile server based application
--   **-client**  compile client based application
--   **-i**        include directory
--   **-o**        output basename
+-   **--server**	compile server based application
+-   **--client**	compile client based application
+-   **-i**			include directory
+-   **-o**			output basename
+-	**--hint**		jshint config file
 
 
 **0.1.0**:
@@ -56,3 +57,10 @@ open-source platform to develop client and/or server web application.
 -	add a config file for jshint (with option --hint )
 - 	add a source-map comment at the end of generated files
 - 	error handling on request
+
+**0.2.0**:
+
+-	source map support for node server and node-inspector
+-	source map support for client
+- 	jshint code validation
+- 	patch for stylesheet attribute, relative path, -o and --hint options

@@ -3,15 +3,21 @@
 
 	<property id="name">test</property>
 	<property id="port">4242</property>
-
-	<include href='second.wk' />
-
+	<client>
+	</client>
 	<server>
+
 		<handler url="/" type="text/html">
+			<on id="request">
+				model.plop = 2;
+			</on>
+
 			<template system="square">
 				<![CDATA[
 					#{include("/header")}#
-						<h3>INCLUDE PAGE </h3>
+						<h1>BASIC PAGE #plop#</h1>
+						<h2>subtitle</h2>
+						<h3>sub-subtitle</h3>
 					#{include("/footer")}#
 				]]>
 			</template>
@@ -19,16 +25,12 @@
 
 		<handler url="/plop.client.css" type="text/css">
 			<on id="render">
-				var css = require('fs').readFileSync('plop.server.css');
+				var css = require('fs').readFileSync('plop.client.css');
 				return (css.toString());
 			</on>
 		</handler>
 	
 	</server>
-
-
-
-
 	<template id="/header" system="square">
 		<![CDATA[
 			<html>
@@ -45,4 +47,32 @@
 			</html>
 		]]>
 	</template>
+
+	<stylesheet system="less">
+		<![CDATA[
+			@size: 	2px;
+			h1 {
+				background: 	#414141;
+				color: 			white;
+				border: 		@size;
+			}
+		]]>
+	</stylesheet>
+	<stylesheet system="sass">
+		<![CDATA[
+			$size: 	1px;
+			h2 {
+				background: 	#424242;
+				color: 			white;
+				border: 		$size;
+			}
+		]]>
+	</stylesheet>
+	<stylesheet system="css">
+		<![CDATA[
+			h3 {
+				border: 		1px;
+			}
+		]]>
+	</stylesheet>
 </application>
