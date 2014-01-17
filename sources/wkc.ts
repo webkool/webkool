@@ -6,7 +6,12 @@
 		- ./square.js
 
 	todo:
-		-publier 
+		-mettre a jour le README
+		-mettre a jour la version dans wkc.ts
+		-mettre au propre la partie example
+		-verifier
+		-publier
+
 */
 
 
@@ -915,7 +920,7 @@ module Webkool {
 		var parser = new expat.Parser('UTF-8');
 		parser.currentElement = null;
 		parser.currentText = '';
-		addFileInSourceMapFolder(filename);
+		addFileInSourceMapFolder(filename, options.output);
 
 		parser.roots = new Roots(parser, 'roots', null, filename);
 
@@ -1025,15 +1030,17 @@ module Webkool {
 				if (buff[i].side == side && (buff[i].name == '.js' || buff[i].name == '.css')) {
 					var fileName  		= name + buff[i].name;
 					var outputStream  	= fs.createWriteStream(fileName);
-					var outputStreamMap = fs.createWriteStream('source-map/' + fileName + '.map');
+					var folder = options.output.substr(0, options.output.lastIndexOf('/'));
+					var outputStreamMap = fs.createWriteStream(folder + '/source-map/' + fileName.substr(fileName.lastIndexOf('/') + 1) + '.map');
 
 					var txt 		= buffers.toString(side, buff[i].name);
 					var sourceMap 	= buffers.toSourceMap(side, buff[i].name, fileName);
 
+
 					console.log('#saving in file ' + fileName);
-					console.log('#saving in file ' + fileName + '.map');
+					console.log('#saving in file ' + fileName.substr(fileName.lastIndexOf('/') + 1) + '.map');
 					outputStream.write(txt);
-					outputStream.write('//# sourceMappingURL=source-map/' + fileName + '.map');
+					outputStream.write('//# sourceMappingURL=source-map/' + fileName.substr(fileName.lastIndexOf('/') + 1) + '.map');
 
 					var sourceMapGenerated = sourceMap.toString();
 					outputStreamMap.write(sourceMapGenerated);
@@ -1075,18 +1082,21 @@ module Webkool {
 		}
 	}
 
-	function 	generateSourceMapFolder() {
+	function 	generateSourceMapFolder(where) {
+		var folder = where.substr(0, where.lastIndexOf('/'));
+		console.log(folder);
 		try {
-			fs.mkdirSync('./source-map');
+			fs.mkdirSync(folder + '/source-map');
 		} catch (ignore) {}
 	}
 
-	function 	addFileInSourceMapFolder(file) {
+	function 	addFileInSourceMapFolder(file, where) {
 		try {
+			var folder = where.substr(0, where.lastIndexOf('/'));
 			var name = file.substr(file.lastIndexOf('/') + 1);
 			var data = fs.readFileSync(file);
 
-			fs.writeFileSync('./source-map/' + name, data);
+			fs.writeFileSync(folder + '/source-map/' + name, data);
 		}
 		catch (e) {
 			console.log(e);
@@ -1104,7 +1114,7 @@ module Webkool {
 		var webkoolFile = rootPath + '.webkool.wk';
 
 		checkWebKoolWkFileExistence(webkoolFile);
-		generateSourceMapFolder();
+		generateSourceMapFolder(options.output);
 		//begin the parsing of .webkool.wk
 
 
