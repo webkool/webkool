@@ -55,6 +55,7 @@ var Webkool;
     var jshint = require('jshint').JSHINT;
     var fs = require('fs');
 
+    var basePath;
     var outputJS, outputCSS, options = {
         client: false,
         server: false,
@@ -85,7 +86,7 @@ else {
                     column: itm.character
                 });
                 if (location.line != null) {
-                    console.log(itm.id, itm.code, itm.reason, 'in file', location.source + ':' + location.line + location.column);
+                    console.log(itm.id, itm.code, itm.reason, 'in file', location.source + ':' + location.line + ':' + location.column);
                 } else {
                     console.log(itm.id, itm.code, itm.reason, ' (' + itm.line + ', ' + itm.character + ')');
                 }
@@ -409,6 +410,7 @@ else
             var basePath = this.location.file.substr(0, this.location.file.lastIndexOf('/')) + '/';
             var filename = basePath + this.attrs.href;
 
+            console.log(filename);
             var extension = '.' + filename.split('.').pop();
 
             console.log('# including ' + this.attrs.href);
@@ -476,8 +478,14 @@ else
             var middle = this.text;
             var end = '}},\n';
 
+            var newLocation = {
+                line: this.location.line,
+                col: this.location.col,
+                file: relativePath(this.location.file)
+            };
+
             buffers.write(side, this.outputType, begin, null, false);
-            buffers.write(side, this.outputType, middle, this.location, true);
+            buffers.write(side, this.outputType, middle, newLocation, true);
             buffers.write(side, this.outputType, end, null, false);
         };
         return On;
@@ -519,7 +527,13 @@ else
         Script.prototype.printBody = function (buffers, side) {
             var data = this.text;
 
-            buffers.write(side, this.outputType, data, this.location, true);
+            var newLocation = {
+                line: this.location.line,
+                col: this.location.col,
+                file: relativePath(this.location.file)
+            };
+
+            buffers.write(side, this.outputType, data, newLocation, true);
         };
         return Script;
     })(Element);
@@ -882,6 +896,10 @@ else
         }
     }
 
+    function relativePath(path) {
+        return (path.substr(basePath.length));
+    }
+
     function makePath(rootpath, filename) {
         var length = rootpath.length, path = filename;
         if (length) {
@@ -927,7 +945,7 @@ else
                     console.log('#saving in file ' + fileName);
                     console.log('#saving in file ' + fileName + '.map');
                     outputStream.write(txt);
-                    outputStream.write('//# sourceMappingURL=' + fileName + '.map');
+                    outputStream.write('//# sourceMappingURL=' + relativePath(fileName) + '.map');
 
                     var sourceMapGenerated = sourceMap.toString();
                     outputStreamMap.write(sourceMapGenerated);
@@ -974,6 +992,7 @@ else
         var rootPath = entryPoint.substr(0, entryPoint.lastIndexOf('/')) + '/';
         var webkoolFile = rootPath + '.webkool.wk';
 
+        basePath = rootPath;
         checkWebKoolWkFileExistence(webkoolFile);
 
         //begin the parsing of .webkool.wk

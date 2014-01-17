@@ -39,6 +39,7 @@ function sanitize(str) {
 
 
 
+
 module Webkool {
 	'use strict';
 	
@@ -69,6 +70,7 @@ module Webkool {
 	var jshint	= require('jshint').JSHINT; 	//output syntax validation
 	var fs 		= require('fs'); 				//filesystem access
 
+	var basePath;
 	var outputJS,
 		outputCSS,
 		options = { 							//command line options
@@ -100,7 +102,7 @@ module Webkool {
 			  		column: itm.character
 				});
 				if (location.line != null) {
-					console.log(itm.id, itm.code, itm.reason, 'in file', location.source + ':' + location.line + location.column);
+					console.log(itm.id, itm.code, itm.reason, 'in file', location.source + ':' + location.line + ':' + location.column);
 				}
 				else {
 					console.log(itm.id, itm.code, itm.reason, ' (' + itm.line + ', ' + itm.character + ')');
@@ -472,6 +474,7 @@ module Webkool {
 			var basePath = this.location.file.substr(0, this.location.file.lastIndexOf('/')) + '/';
 			var filename = basePath + this.attrs.href;
 
+			console.log(filename);	
 			var extension = '.' + filename.split('.').pop();
 
 			console.log('# including ' + this.attrs.href);
@@ -543,9 +546,15 @@ module Webkool {
 			var begin 	= 'on_' + this.attrs.id + ': { value: function(context, model, query, result) {';
 			var middle 	= this.text;
 			var end 	= '}},\n';
-			
+
+			var newLocation = {
+				line: 	this.location.line,
+				col: 	this.location.col,
+				file: 	relativePath(this.location.file)
+			};
+
 			buffers.write(side, this.outputType, begin, null, false);
-			buffers.write(side, this.outputType, middle, this.location, true);
+			buffers.write(side, this.outputType, middle, newLocation, true);
 			buffers.write(side, this.outputType, end, null, false);
 		}
 
@@ -588,7 +597,13 @@ module Webkool {
 		printBody(buffers: BufferManager, side: SideType) {
 			var data = this.text;
 
-			buffers.write(side, this.outputType, data, this.location, true);
+			var newLocation = {
+				line: 	this.location.line,
+				col: 	this.location.col,
+				file: 	relativePath(this.location.file)
+			};
+
+			buffers.write(side, this.outputType, data, newLocation, true);
 		}
 	}
 
@@ -967,6 +982,10 @@ module Webkool {
 		}
 	}
 
+	function relativePath(path) {
+		return (path.substr(basePath.length));
+	}
+
 	function makePath(rootpath, filename) {
 		var length = rootpath.length, 
 			path = filename;
@@ -1015,7 +1034,7 @@ module Webkool {
 					console.log('#saving in file ' + fileName);
 					console.log('#saving in file ' + fileName + '.map');
 					outputStream.write(txt);
-					outputStream.write('//# sourceMappingURL=' + fileName + '.map');
+					outputStream.write('//# sourceMappingURL=' + relativePath(fileName) + '.map');
 
 					var sourceMapGenerated = sourceMap.toString();
 					outputStreamMap.write(sourceMapGenerated);
@@ -1068,6 +1087,7 @@ module Webkool {
 		var rootPath = entryPoint.substr(0, entryPoint.lastIndexOf('/')) + '/';
 		var webkoolFile = rootPath + '.webkool.wk';
 
+		basePath = rootPath;
 		checkWebKoolWkFileExistence(webkoolFile);
 		//begin the parsing of .webkool.wk
 
