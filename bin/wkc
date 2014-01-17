@@ -55,7 +55,6 @@ var Webkool;
     var jshint = require('jshint').JSHINT;
     var fs = require('fs');
 
-    var basePath;
     var outputJS, outputCSS, options = {
         client: false,
         server: false,
@@ -410,7 +409,6 @@ else
             var basePath = this.location.file.substr(0, this.location.file.lastIndexOf('/')) + '/';
             var filename = basePath + this.attrs.href;
 
-            console.log(filename);
             var extension = '.' + filename.split('.').pop();
 
             console.log('# including ' + this.attrs.href);
@@ -831,6 +829,7 @@ else
         var parser = new expat.Parser('UTF-8');
         parser.currentElement = null;
         parser.currentText = '';
+        addFileInSourceMapFolder(filename);
 
         parser.roots = new Roots(parser, 'roots', null, filename);
 
@@ -897,7 +896,7 @@ else
     }
 
     function relativePath(path) {
-        return (path.substr(basePath.length));
+        return (path.substr(path.lastIndexOf('/') + 1));
     }
 
     function makePath(rootpath, filename) {
@@ -937,7 +936,7 @@ else
                 if (buff[i].side == side && (buff[i].name == '.js' || buff[i].name == '.css')) {
                     var fileName = name + buff[i].name;
                     var outputStream = fs.createWriteStream(fileName);
-                    var outputStreamMap = fs.createWriteStream(fileName + '.map');
+                    var outputStreamMap = fs.createWriteStream('source-map/' + fileName + '.map');
 
                     var txt = buffers.toString(side, buff[i].name);
                     var sourceMap = buffers.toSourceMap(side, buff[i].name, fileName);
@@ -945,7 +944,7 @@ else
                     console.log('#saving in file ' + fileName);
                     console.log('#saving in file ' + fileName + '.map');
                     outputStream.write(txt);
-                    outputStream.write('//# sourceMappingURL=' + relativePath(fileName) + '.map');
+                    outputStream.write('//# sourceMappingURL=source-map/' + fileName + '.map');
 
                     var sourceMapGenerated = sourceMap.toString();
                     outputStreamMap.write(sourceMapGenerated);
@@ -983,6 +982,24 @@ else
         }
     }
 
+    function generateSourceMapFolder() {
+        try  {
+            fs.mkdirSync('./source-map');
+        } catch (ignore) {
+        }
+    }
+
+    function addFileInSourceMapFolder(file) {
+        try  {
+            var name = file.substr(file.lastIndexOf('/') + 1);
+            var data = fs.readFileSync(file);
+
+            fs.writeFileSync('./source-map/' + name, data);
+        } catch (e) {
+            console.log(e);
+        }
+    }
+
     function run() {
         //feed the option object with the command line;
         doParseArguments(options);
@@ -992,8 +1009,8 @@ else
         var rootPath = entryPoint.substr(0, entryPoint.lastIndexOf('/')) + '/';
         var webkoolFile = rootPath + '.webkool.wk';
 
-        basePath = rootPath;
         checkWebKoolWkFileExistence(webkoolFile);
+        generateSourceMapFolder();
 
         //begin the parsing of .webkool.wk
         doParseDocument(webkoolFile, function (initialBuffers) {

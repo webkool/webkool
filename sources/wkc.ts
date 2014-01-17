@@ -70,7 +70,6 @@ module Webkool {
 	var jshint	= require('jshint').JSHINT; 	//output syntax validation
 	var fs 		= require('fs'); 				//filesystem access
 
-	var basePath;
 	var outputJS,
 		outputCSS,
 		options = { 							//command line options
@@ -474,7 +473,6 @@ module Webkool {
 			var basePath = this.location.file.substr(0, this.location.file.lastIndexOf('/')) + '/';
 			var filename = basePath + this.attrs.href;
 
-			console.log(filename);	
 			var extension = '.' + filename.split('.').pop();
 
 			console.log('# including ' + this.attrs.href);
@@ -917,6 +915,7 @@ module Webkool {
 		var parser = new expat.Parser('UTF-8');
 		parser.currentElement = null;
 		parser.currentText = '';
+		addFileInSourceMapFolder(filename);
 
 		parser.roots = new Roots(parser, 'roots', null, filename);
 
@@ -983,7 +982,7 @@ module Webkool {
 	}
 
 	function relativePath(path) {
-		return (path.substr(basePath.length));
+		return (path.substr(path.lastIndexOf('/') + 1));
 	}
 
 	function makePath(rootpath, filename) {
@@ -1026,7 +1025,7 @@ module Webkool {
 				if (buff[i].side == side && (buff[i].name == '.js' || buff[i].name == '.css')) {
 					var fileName  		= name + buff[i].name;
 					var outputStream  	= fs.createWriteStream(fileName);
-					var outputStreamMap = fs.createWriteStream(fileName + '.map');
+					var outputStreamMap = fs.createWriteStream('source-map/' + fileName + '.map');
 
 					var txt 		= buffers.toString(side, buff[i].name);
 					var sourceMap 	= buffers.toSourceMap(side, buff[i].name, fileName);
@@ -1034,7 +1033,7 @@ module Webkool {
 					console.log('#saving in file ' + fileName);
 					console.log('#saving in file ' + fileName + '.map');
 					outputStream.write(txt);
-					outputStream.write('//# sourceMappingURL=' + relativePath(fileName) + '.map');
+					outputStream.write('//# sourceMappingURL=source-map/' + fileName + '.map');
 
 					var sourceMapGenerated = sourceMap.toString();
 					outputStreamMap.write(sourceMapGenerated);
@@ -1076,6 +1075,23 @@ module Webkool {
 		}
 	}
 
+	function 	generateSourceMapFolder() {
+		try {
+			fs.mkdirSync('./source-map');
+		} catch (ignore) {}
+	}
+
+	function 	addFileInSourceMapFolder(file) {
+		try {
+			var name = file.substr(file.lastIndexOf('/') + 1);
+			var data = fs.readFileSync(file);
+
+			fs.writeFileSync('./source-map/' + name, data);
+		}
+		catch (e) {
+			console.log(e);
+		}
+	}
 
 
 	export function run() {
@@ -1087,10 +1103,9 @@ module Webkool {
 		var rootPath = entryPoint.substr(0, entryPoint.lastIndexOf('/')) + '/';
 		var webkoolFile = rootPath + '.webkool.wk';
 
-		basePath = rootPath;
 		checkWebKoolWkFileExistence(webkoolFile);
+		generateSourceMapFolder();
 		//begin the parsing of .webkool.wk
-
 
 
 		doParseDocument(webkoolFile, function (initialBuffers:BufferManager) {
