@@ -6,9 +6,7 @@
 		- ./square.js
 
 	todo:
-	√	indexer les filename a partir du plus petit denominateur commun a tout les fichier. ou tout referencer a partir du fichier passer en param.
-	√	penser a indexer aussi les lien de source map en find e fichier generé.
-	√	changer l'output d'erreur en file:line:column
+		-publier 
 */
 
 
@@ -1066,7 +1064,7 @@ module Webkool {
 		doParseArguments(options);
 		//create a .webkool.wk file if it doesn't exist.
 
-		var entryPoint = './' + options.inputs.shift();
+		var entryPoint = options.inputs.shift();
 		var rootPath = entryPoint.substr(0, entryPoint.lastIndexOf('/')) + '/';
 		var webkoolFile = rootPath + '.webkool.wk';
 
