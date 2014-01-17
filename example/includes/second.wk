@@ -1,11 +1,48 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <application xmlns="http://www.webkool.net/1.0/">
 
-	<stylesheet type='less'><![CDATA[
-		@x: 2;
-		h3 {
-			border: 	@x solid black;
-		}
+	<property id="name">test</property>
+	<property id="port">4242</property>
+
+	<include href='second.wk' />
+
+	<server>
+		<handler url="/" type="text/html">
+			<template system="square">
+				<![CDATA[
+					#{include("/header")}#
+						<h3>INCLUDE PAGE </h3>
+					#{include("/footer")}#
+				]]>
+			</template>
+		</handler>
+
+		<handler url="/plop.client.css" type="text/css">
+			<on id="render">
+				var css = require('fs').readFileSync('plop.server.css');
+				return (css.toString());
+			</on>
+		</handler>
+	
+	</server>
+
+
+
+
+	<template id="/header" system="square">
+		<![CDATA[
+			<html>
+				<head>
+					<title>Basic</title>
+					<link href="plop.client.css" rel="stylesheet" type="text/css" />
+				</head>
+				<body>
 		]]>
-	</stylesheet>
+	</template>
+	<template id="/footer" system="square">
+		<![CDATA[
+				</body>
+			</html>
+		]]>
+	</template>
 </application>

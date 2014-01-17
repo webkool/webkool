@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<application xmlns="http://www.webkool.net/1.0/">
+	
+	<server>
+		<script>
+			console.log('in the server');
+		</script>
+	</server>
+	<client>
+		<script>
+			console.log('in the client');
+		</script>
+	</client>
+</application>

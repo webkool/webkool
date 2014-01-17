@@ -5,15 +5,10 @@
 		- fs
 		- ./square.js
 
-	ce qui est fait:
-		-source map fonctionnel mais pas assez precise
-		-la fonction builSOurceNode produit des object qui semble faux (le nom des attr devrai etre '.js' mais pas 32)
-		-la fonction de print de ON a ete modifie pour faire des tests/
-
 	todo:
-		- checker les attributes de chaque tag
-		- coriger le code jshint
-
+	√	indexer les filename a partir du plus petit denominateur commun a tout les fichier. ou tout referencer a partir du fichier passer en param.
+	√	penser a indexer aussi les lien de source map en find e fichier generé.
+	√	changer l'output d'erreur en file:line:column
 */
 
 
@@ -106,8 +101,12 @@ module Webkool {
 		  			line: 	itm.line,
 			  		column: itm.character
 				});
-				if (location.line != null)
-					console.log(itm.id, itm.code, itm.reason, 'in file', '<' + location.source + '>', '(' + location.line + ', ' + location.column + ')');
+				if (location.line != null) {
+					console.log(itm.id, itm.code, itm.reason, 'in file', location.source + ':' + location.line + location.column);
+				}
+				else {
+					console.log(itm.id, itm.code, itm.reason, ' (' + itm.line + ', ' + itm.character + ')');
+				}
 			}
 		});
 
@@ -256,7 +255,7 @@ module Webkool {
 		}
 
 		public toSourceMap(side:SideType, name:string, filename:string) {
-			var map = new sm.SourceMapGenerator({ file: 'out.js' });
+			var map = new sm.SourceMapGenerator({ file: filename });
 			var generatedLine = 1;
 			var buff = this.get(side, name, false);
 
@@ -472,7 +471,8 @@ module Webkool {
 		public prepare(parser) {
 			this.checkAttrs(this.attrs, this.location, this.name);
 			var element = this;
-			var filename = getPath(this.attrs.href);
+			var basePath = this.location.file.substr(0, this.location.file.lastIndexOf('/')) + '/';
+			var filename = basePath + this.attrs.href;
 
 			var extension = '.' + filename.split('.').pop();
 
@@ -492,18 +492,37 @@ module Webkool {
 				else {
 					parser.wait(this);
 					this.outputType = extension;
-					var _this = this;
-					fs.readFile(filename, function (err, data) {
-						var res = '';
+
+					var readIncludeFile = function (parser, element, filename, extension) {
+						try {
+							var res = '/* include ' + filename + ' */\n';
+								res += fs.readFileSync(filename, 'utf-8');
+							element.preparedBuffers.write(SideType.BOTH, extension, res, null, false);
+							parser.dequeue(element);
+							return (true);
+						}
+						catch (e) {
+							return (false);
+						}
+					}
+					var found = false;
+
+					if (!readIncludeFile(parser, element, filename, extension)) {
+						for (var i = 0; i < options.includes.length; i++) {
+							var newName = options.includes[i] + this.attrs.href;
+							if (readIncludeFile(parser, element, newName, extension)) {
+								found = true;
+								break;
+							}
+						}
 						
-						res += '/* include ' + element.attrs.href + '*/\n';
-						res += data.toString();
-
-						element.preparedBuffers.write(SideType.BOTH, extension, res, null, false);
-
-						parser.dequeue(element);
-
-					});
+					}
+					else {
+						found = true;
+					}
+					if (found === false) {
+						throw Error('file not found <' + this.attrs.href + '>');
+					}
 				}
 			}
 		}
@@ -964,12 +983,12 @@ module Webkool {
 		return fs.realpathSync(path);
 	}
 
-	function checkWebKoolWkFileExistence() {
+	function checkWebKoolWkFileExistence(filename) {
 		try {
-			var path = fs.realpathSync('./.webkool.wk');
+			var path = fs.realpathSync(filename);
 		} catch (e) {
 			var data = fs.readFileSync(__dirname + '/../sources/templates/webkool.wk');
-			fs.writeFileSync('./.webkool.wk', data);
+			fs.writeFileSync(filename, data);
 		}
 	}
 
@@ -993,7 +1012,7 @@ module Webkool {
 					var outputStreamMap = fs.createWriteStream(fileName + '.map');
 
 					var txt 		= buffers.toString(side, buff[i].name);
-					var sourceMap 	= buffers.toSourceMap(side, buff[i].name, 'index.wk');
+					var sourceMap 	= buffers.toSourceMap(side, buff[i].name, fileName);
 
 					console.log('#saving in file ' + fileName);
 					console.log('#saving in file ' + fileName + '.map');
@@ -1046,12 +1065,20 @@ module Webkool {
 		//feed the option object with the command line;
 		doParseArguments(options);
 		//create a .webkool.wk file if it doesn't exist.
-		checkWebKoolWkFileExistence();
+
+		var entryPoint = './' + options.inputs.shift();
+		var rootPath = entryPoint.substr(0, entryPoint.lastIndexOf('/')) + '/';
+		var webkoolFile = rootPath + '.webkool.wk';
+
+		checkWebKoolWkFileExistence(webkoolFile);
 		//begin the parsing of .webkool.wk
-		doParseDocument('.webkool.wk', function (initialBuffers:BufferManager) {
+
+
+
+		doParseDocument(webkoolFile, function (initialBuffers:BufferManager) {
 			var _buffers = initialBuffers;
 			//parse the entry point (index.wk for example)
-			doParseDocument(options.inputs.shift(), function (buffers:BufferManager) {
+			doParseDocument(entryPoint, function (buffers:BufferManager) {
 
 				_buffers.merge(SideType.BOTH, buffers, 0);
 				
@@ -1071,7 +1098,6 @@ module Webkool {
 }
 
 Webkool.run()
-
 
 
 

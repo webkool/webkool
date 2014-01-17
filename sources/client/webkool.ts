@@ -298,7 +298,7 @@ class Application {
 	}
 
 	internalError(context, error) {
-		console.log('Internal error\r' + error.toString() + '\r' + error.stack);
+		throw (error);
 	}
 
 	parseQuery(url) {
@@ -485,6 +485,7 @@ class Server extends Application {
 			}
 		}
 		catch (ignore) {
+			throw ignore;
 		}
 	}
 
@@ -538,5 +539,6 @@ class Server extends Application {
 		context.response.end(text);
 
 		console.log('Internal error\r' + error.toString() + '\r' + error.stack);
+
 	}
 }

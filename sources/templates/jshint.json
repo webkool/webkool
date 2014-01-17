@@ -1,7 +1,12 @@
 {
-  "undef": true,
-  "unused": false,
-  "predef":	[
-  	"require"
-  ]
+  	"undef": 	false,
+  	"unused": 	false,
+  	"sub": 		true,
+  	"predef":		[
+  		"require",
+  		"console",
+  		"Buffer",
+  		"document",
+  		"exports"
+  	]
 }

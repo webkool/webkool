@@ -61,7 +61,6 @@ SOURCES_CLIENT_JS_INP_DIR='./sources/client/'
 SOURCES_CLIENT_JS_OUT_DIR='./lib/client/'
 
 SOURCES_CLIENT_JS[1]='hogan-2.0.0'
-SOURCES_CLIENT_JS[2]='square_lib'
 
 #-----------------------------------------------------------------------------------------
 		echo '[3] sources/client/*.js 			===> lib/client/*.js'

@@ -1,3 +1,5 @@
+
+
 declare var exports;
 declare var Buffer;
 declare var encodeHTML;
@@ -365,11 +367,14 @@ module Square {
 			//
 			carriageReturn(stream, 1);
 			stream.write('/*jshint -W085 */');
+
+
 			stream.write('with (model) {');
 			carriageReturn(stream, 1);
 			stream.write("try {");
 			//
 			carriageReturn(stream, 1);
+			
 			stream.write('var result = \'\';');
 			for (i = 0; i < c; i += 1) {
 				carriageReturn(stream, 0);
@@ -379,11 +384,13 @@ module Square {
 			stream.write('return result;');
 			carriageReturn(stream, -1);
 			//
+			
 			stream.write('}');
 			stream.write('catch (e) {');
 			stream.write('throw e; }');
 			carriageReturn(stream, -1);
 			stream.write('}');
+			stream.write('/*jshint +W085 */');
 			carriageReturn(stream, -1);
 			//
 			stream.write('}');

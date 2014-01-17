@@ -84,8 +84,11 @@ else {
                     line: itm.line,
                     column: itm.character
                 });
-                if (location.line != null)
-                    console.log(itm.id, itm.code, itm.reason, 'in file', '<' + location.source + '>', '(' + location.line + ', ' + location.column + ')');
+                if (location.line != null) {
+                    console.log(itm.id, itm.code, itm.reason, 'in file', location.source + ':' + location.line + location.column);
+                } else {
+                    console.log(itm.id, itm.code, itm.reason, ' (' + itm.line + ', ' + itm.character + ')');
+                }
             }
         });
     }
@@ -219,7 +222,7 @@ else {
         };
 
         BufferManager.prototype.toSourceMap = function (side, name, filename) {
-            var map = new sm.SourceMapGenerator({ file: 'out.js' });
+            var map = new sm.SourceMapGenerator({ file: filename });
             var generatedLine = 1;
             var buff = this.get(side, name, false);
 
@@ -403,7 +406,8 @@ else
         Include.prototype.prepare = function (parser) {
             this.checkAttrs(this.attrs, this.location, this.name);
             var element = this;
-            var filename = getPath(this.attrs.href);
+            var basePath = this.location.file.substr(0, this.location.file.lastIndexOf('/')) + '/';
+            var filename = basePath + this.attrs.href;
 
             var extension = '.' + filename.split('.').pop();
 
@@ -421,17 +425,34 @@ else
                 } else {
                     parser.wait(this);
                     this.outputType = extension;
-                    var _this = this;
-                    fs.readFile(filename, function (err, data) {
-                        var res = '';
 
-                        res += '/* include ' + element.attrs.href + '*/\n';
-                        res += data.toString();
+                    var readIncludeFile = function (parser, element, filename, extension) {
+                        try  {
+                            var res = '/* include ' + filename + ' */\n';
+                            res += fs.readFileSync(filename, 'utf-8');
+                            element.preparedBuffers.write(SideType.BOTH, extension, res, null, false);
+                            parser.dequeue(element);
+                            return (true);
+                        } catch (e) {
+                            return (false);
+                        }
+                    };
+                    var found = false;
 
-                        element.preparedBuffers.write(SideType.BOTH, extension, res, null, false);
-
-                        parser.dequeue(element);
-                    });
+                    if (!readIncludeFile(parser, element, filename, extension)) {
+                        for (var i = 0; i < options.includes.length; i++) {
+                            var newName = options.includes[i] + this.attrs.href;
+                            if (readIncludeFile(parser, element, newName, extension)) {
+                                found = true;
+                                break;
+                            }
+                        }
+                    } else {
+                        found = true;
+                    }
+                    if (found === false) {
+                        throw Error('file not found <' + this.attrs.href + '>');
+                    }
                 }
             }
         };
@@ -873,12 +894,12 @@ else
         return fs.realpathSync(path);
     }
 
-    function checkWebKoolWkFileExistence() {
+    function checkWebKoolWkFileExistence(filename) {
         try  {
-            var path = fs.realpathSync('./.webkool.wk');
+            var path = fs.realpathSync(filename);
         } catch (e) {
             var data = fs.readFileSync(__dirname + '/../sources/templates/webkool.wk');
-            fs.writeFileSync('./.webkool.wk', data);
+            fs.writeFileSync(filename, data);
         }
     }
 
@@ -901,7 +922,7 @@ else
                     var outputStreamMap = fs.createWriteStream(fileName + '.map');
 
                     var txt = buffers.toString(side, buff[i].name);
-                    var sourceMap = buffers.toSourceMap(side, buff[i].name, 'index.wk');
+                    var sourceMap = buffers.toSourceMap(side, buff[i].name, fileName);
 
                     console.log('#saving in file ' + fileName);
                     console.log('#saving in file ' + fileName + '.map');
@@ -949,14 +970,18 @@ else
         doParseArguments(options);
 
         //create a .webkool.wk file if it doesn't exist.
-        checkWebKoolWkFileExistence();
+        var entryPoint = './' + options.inputs.shift();
+        var rootPath = entryPoint.substr(0, entryPoint.lastIndexOf('/')) + '/';
+        var webkoolFile = rootPath + '.webkool.wk';
+
+        checkWebKoolWkFileExistence(webkoolFile);
 
         //begin the parsing of .webkool.wk
-        doParseDocument('.webkool.wk', function (initialBuffers) {
+        doParseDocument(webkoolFile, function (initialBuffers) {
             var _buffers = initialBuffers;
 
             //parse the entry point (index.wk for example)
-            doParseDocument(options.inputs.shift(), function (buffers) {
+            doParseDocument(entryPoint, function (buffers) {
                 _buffers.merge(SideType.BOTH, buffers, 0);
 
                 //process some operation over buffer

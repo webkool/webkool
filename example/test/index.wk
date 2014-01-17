@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<application xmlns="http://www.webkool.net/1.0/">
+	<property id="name">test</property>
+	<property id="port">4242</property>
+	<include href='plop.wk' />
+	<server>
+		<handler url='/' type='text/html'>
+			<on id='render'>
+				return (require('fs').readFileSync('test/index.html'));
+			</on>
+		</handler>
+		<handler url='/plop.client.js' type='text/javascript'>
+			<on id='render'>
+				return (require('fs').readFileSync('plop.client.js'));
+			</on>
+		</handler>
+		<handler url='/plop.client.js.map' type='text/javascript'>
+			<on id='render'>
+				return (require('fs').readFileSync('plop.client.js.map'));
+			</on>
+		</handler>
+		<handler url='/.webkool.wk' type='text/plain'>
+			<on id='render'>
+				return (require('fs').readFileSync('test/.webkool.wk'));
+			</on>
+		</handler>
+		<handler url='/index.wk' type='text/plain'>
+			<on id='render'>
+				return (require('fs').readFileSync('test/index.wk'));
+			</on>
+		</handler>
+	</server>
+
+	<client>
+		<handler url='/test' type='text/html'>
+			<on id='request'>
+				mode.plop = 2;
+			</on>
+			<template system='square'>
+				<![CDATA[
+					<h1> TEST #plop#</h1>
+
+				]]>
+			</template>
+
+		</handler>
+	</client>
+</application>
