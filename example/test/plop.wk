@@ -3,7 +3,7 @@
 	
 	<server>
 		<script>
-			console.log('in the server');
+			console.log('in the ');
 		</script>
 	</server>
 	<client>

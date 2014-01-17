@@ -81,7 +81,7 @@ module Webkool {
 			client:		false,
 			server: 	false,
 			target: 	{},
-			includes: 	[__dirname + '/../lib/client/', './'],
+			includes: 	[__dirname + '/../lib/client/', ''],
 			inputs: 	[],
 			output: 	'',
 			jshint: 	''
@@ -475,58 +475,51 @@ module Webkool {
 		public prepare(parser) {
 			this.checkAttrs(this.attrs, this.location, this.name);
 			var element = this;
-			var basePath = this.location.file.substr(0, this.location.file.lastIndexOf('/')) + '/';
-			var filename = basePath + this.attrs.href;
+			var filename = this.attrs.href;
 
 			var extension = '.' + filename.split('.').pop();
 
 			console.log('# including ' + this.attrs.href);
-			if (!filename) {
-				console.log('// include ' + this.attrs.href + ' not found!');
+			if (extension == '.wk') {
+				parser.wait(this);
+				this.outputType = '.wk'
+				doParseDocument(filename, function (buffers) {
+					element.preparedBuffers = buffers;
+					parser.dequeue(element);
+				});
 			}
 			else {
-				if (extension == '.wk') {
-					parser.wait(this);
-					this.outputType = '.wk'
-					doParseDocument(filename, function (buffers) {
-						element.preparedBuffers = buffers;
+				parser.wait(this);
+				this.outputType = extension;
+				var readIncludeFile = function (parser, element, filename, extension) {
+					try {
+						var res = '/* include ' + filename + ' */\n';
+							res += fs.readFileSync(filename, 'utf-8');
+						element.preparedBuffers.write(SideType.BOTH, extension, res, null, false);
 						parser.dequeue(element);
-					});
+						return (true);
+					}
+					catch (e) {
+						return (false);
+					}
+				}
+				var found = false;
+
+				if (!readIncludeFile(parser, element, filename, extension)) {
+					for (var i = 0; i < options.includes.length; i++) {
+						var newName = options.includes[i] + this.attrs.href;
+						if (readIncludeFile(parser, element, newName, extension)) {
+							found = true;
+							break;
+						}
+					}
+					
 				}
 				else {
-					parser.wait(this);
-					this.outputType = extension;
-
-					var readIncludeFile = function (parser, element, filename, extension) {
-						try {
-							var res = '/* include ' + filename + ' */\n';
-								res += fs.readFileSync(filename, 'utf-8');
-							element.preparedBuffers.write(SideType.BOTH, extension, res, null, false);
-							parser.dequeue(element);
-							return (true);
-						}
-						catch (e) {
-							return (false);
-						}
-					}
-					var found = false;
-
-					if (!readIncludeFile(parser, element, filename, extension)) {
-						for (var i = 0; i < options.includes.length; i++) {
-							var newName = options.includes[i] + this.attrs.href;
-							if (readIncludeFile(parser, element, newName, extension)) {
-								found = true;
-								break;
-							}
-						}
-						
-					}
-					else {
-						found = true;
-					}
-					if (found === false) {
-						throw Error('file not found <' + this.attrs.href + '>');
-					}
+					found = true;
+				}
+				if (found === false) {
+					throw Error('file not found <' + this.attrs.href + '>');
 				}
 			}
 		}
@@ -920,8 +913,9 @@ module Webkool {
 		var parser = new expat.Parser('UTF-8');
 		parser.currentElement = null;
 		parser.currentText = '';
+		
+		filename = getPath(filename);
 		addFileInSourceMapFolder(filename, options.output);
-
 		parser.roots = new Roots(parser, 'roots', null, filename);
 
 		parser.filename = filename;
@@ -971,38 +965,29 @@ module Webkool {
 	}
 
 	function getPath(filename) {
-		var i, c = options.includes.length, path, folder;
-		for (i = 0; i < c; i+= 1) {
+		var path;
+		var folder;
+
+		for (var i = 0; i < options.includes.length; i+= 1) {
 			folder = options.includes[i];
 			try {
-				path = makePath(folder, filename);
-				if (path) {
-					return path;
-				}
+
+				path = folder + filename;
+				fs.statSync(path);
+				
+				return (folder + filename);
 			}
 			catch (unused) {
 				continue;
 			}
 		}
+		console.log('// file not found ' + filename);
 	}
 
 	function relativePath(path) {
 		return (path.substr(path.lastIndexOf('/') + 1));
 	}
 
-	function makePath(rootpath, filename) {
-		var length = rootpath.length, 
-			path = filename;
-		if (length) {
-			if (rootpath.charAt(length - 1) != '/') {
-				path = rootpath + '/' + filename;
-			}
-			else {
-				path = rootpath + filename;
-			}
-		}
-		return fs.realpathSync(path);
-	}
 
 	function checkWebKoolWkFileExistence(filename) {
 		try {
@@ -1084,7 +1069,7 @@ module Webkool {
 
 	function 	generateSourceMapFolder(where) {
 		var folder = where.substr(0, where.lastIndexOf('/'));
-		console.log(folder);
+
 		try {
 			fs.mkdirSync(folder + '/source-map');
 		} catch (ignore) {}
@@ -1098,9 +1083,7 @@ module Webkool {
 
 			fs.writeFileSync(folder + '/source-map/' + name, data);
 		}
-		catch (e) {
-			console.log(e);
-		}
+		catch (e) {}
 	}
 
 
@@ -1113,6 +1096,7 @@ module Webkool {
 		var rootPath = entryPoint.substr(0, entryPoint.lastIndexOf('/')) + '/';
 		var webkoolFile = rootPath + '.webkool.wk';
 
+		options.includes.push(rootPath);
 		checkWebKoolWkFileExistence(webkoolFile);
 		generateSourceMapFolder(options.output);
 		//begin the parsing of .webkool.wk

@@ -2,11 +2,11 @@
 <application xmlns="http://www.webkool.net/1.0/">
 	<property id="name">test</property>
 	<property id="port">4242</property>
-	<include href='source/plop.wk' />
+	<include href='plop.wk' />
 	<server>
 		<handler url='/' type='text/html'>
 			<on id='render'>
-				return (require('fs').readFileSync('test/index.html'));
+				return (require('fs').readFileSync('../index.html'));
 			</on>
 		</handler>
 		<handler url='/plop.client.js' type='text/javascript'>
@@ -21,12 +21,12 @@
 		</handler>
 		<handler url='/.webkool.wk' type='text/plain'>
 			<on id='render'>
-				return (require('fs').readFileSync('test/.webkool.wk'));
+				return (require('fs').readFileSync('../.webkool.wk'));
 			</on>
 		</handler>
 		<handler url='/index.wk' type='text/plain'>
 			<on id='render'>
-				return (require('fs').readFileSync('test/index.wk'));
+				return (require('fs').readFileSync('../index.wk'));
 			</on>
 		</handler>
 	</server>
@@ -34,7 +34,7 @@
 	<client>
 		<handler url='/test' type='text/html'>
 			<on id='request'>
-				mode.plop = 2;
+				model.plop = 2;
 			</on>
 			<template system='square'>
 				<![CDATA[
