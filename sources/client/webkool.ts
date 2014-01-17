@@ -1,3 +1,11 @@
+
+/*
+	on_render ---> doRender using model.json()
+	include dans model un access au dom (notre propre getElementById)
+*/
+
+
+
 declare var Buffer;
 declare var application;
 declare var require;
@@ -96,7 +104,7 @@ class Context {
 						}
 					}
 					catch (e) {
-						console.log(e.toString());
+						throw e;
 					}
 				}
 				else {
@@ -290,7 +298,7 @@ class Application {
 	}
 
 	internalError(context, error) {
-		console.log('Internal error\r' + error.toString() + '\r' + error.stack);
+		throw (error);
 	}
 
 	parseQuery(url) {
@@ -300,7 +308,7 @@ class Application {
 			l = params.length;
 			for (i = 0; i < l; i += 1) {
 				param = params[i].split('=');
-				if (param.length == 2) 															//patch
+				if (param.length == 2) 															
 					query[param[0]] = decodeURIComponent(param[1]);
 			}
 		}
@@ -461,7 +469,6 @@ class Server extends Application {
 						buffer = Buffer.concat([buffer, data]);
 					});
 					part.on('end', function() {
-						/*jshint -W069 */
 						query['data'] = buffer;
 					});
 					part.on('error', function(e) {
@@ -478,6 +485,7 @@ class Server extends Application {
 			}
 		}
 		catch (ignore) {
+			throw ignore;
 		}
 	}
 
@@ -531,5 +539,6 @@ class Server extends Application {
 		context.response.end(text);
 
 		console.log('Internal error\r' + error.toString() + '\r' + error.stack);
+
 	}
 }

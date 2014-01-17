@@ -9,7 +9,7 @@
 
 		<handler url="/" type="text/html">
 			<on id="request">
-				plop = 2;
+				model.plop = 2;
 			</on>
 
 			<template system="square">
@@ -48,7 +48,7 @@
 		]]>
 	</template>
 
-	<stylesheet type="less">
+	<stylesheet system="less">
 		<![CDATA[
 			@size: 	2px;
 			h1 {
@@ -58,7 +58,7 @@
 			}
 		]]>
 	</stylesheet>
-	<stylesheet type="sass">
+	<stylesheet system="sass">
 		<![CDATA[
 			$size: 	1px;
 			h2 {
@@ -68,7 +68,7 @@
 			}
 		]]>
 	</stylesheet>
-	<stylesheet type="css">
+	<stylesheet system="css">
 		<![CDATA[
 			h3 {
 				border: 		1px;

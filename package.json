@@ -10,7 +10,7 @@
     "api"
   ],
 
-  "version": "0.1.4",
+  "version": "0.1.7",
   "preferGlobal": true,
 
   "license":  "Apache License 2.0",
@@ -39,16 +39,19 @@
   },
 
   "dependencies": {
-    "less":             "*",
-    "hogan.js":         "*",
-    "mysql":            "*",
-    "node-sass":        "*",
-    "formidable":       "*",
-    "node-expat":       "*",
-    "optimist":         "*",
-    "color-log":        "*",
-    "exec-sync":        "*",
-    "stream-buffers":   "*"
+    "source-map-support": "*",
+    "jshint":             "*",
+    "source-map":         "*",
+    "less":               "*",
+    "hogan.js":           "*",
+    "mysql":              "*",
+    "node-sass":          "*",
+    "formidable":         "*",
+    "node-expat":         "*",
+    "optimist":           "*",
+    "color-log":          "*",
+    "exec-sync":          "*",
+    "stream-buffers":     "*"
   },
   
   "engines": {

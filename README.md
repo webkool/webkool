@@ -12,10 +12,11 @@ open-source platform to develop client and/or server web application.
 
   options:
   
--   **-server** compile server based application
--   **-client**  compile client based application
--   **-i**        include directory
--   **-o**        output basename
+-   **--server**	compile server based application
+-   **--client**	compile client based application
+-   **-i**		include directory
+-   **-o**		output basename
+-   **--hint**		jshint config file
 
 
 **0.1.0**:
@@ -24,7 +25,7 @@ open-source platform to develop client and/or server web application.
 
 **0.1.1**:
 
--   add './' and '../lib/client' to the default include path
+-   add './' and s'../lib/client' to the default include path
 
 **0.1.2**:
 
@@ -41,4 +42,27 @@ open-source platform to develop client and/or server web application.
 -	ajax request (apiRequest)
 -	improved one pass compilation
 - 	jshint code fix
+
+**0.1.5**:
+
+-	improved one pass compilation and bug fixing
+- 	source map support
+
+**0.1.6**:
+
+-	jshint debug support during compilation process
+-	fix problem with line/column in source-map
+
+**0.1.7**:
+
+-	add a config file for jshint (with option --hint )
+- 	add a source-map comment at the end of generated files
+- 	error handling on request
+
+**0.2.0**:
+
+-	source map support for node server and node-inspector
+-	source map support for client
+- 	jshint code validation
+- 	patch for stylesheet attribute, relative path, -o and --hint options
 
