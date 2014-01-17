@@ -355,7 +355,45 @@ module Webkool {
 	**	Nodes
 	*/
 	
-	
+	function 	loadExternFile(context, parser, filename, putInBuffer) {
+		var found 		= false;
+		var element 	= context;
+		var extension 	=  '.' + filename.split('.').pop();
+		var content 	= '';
+		var readIncludeFile = function (parser, element, filename, extension) {
+			try {
+				var res = '';
+				if (putInBuffer == true)
+					res += '/* include ' + filename + ' */\n';
+				res += fs.readFileSync(filename, 'utf-8');
+				if (putInBuffer == true)
+					element.preparedBuffers.write(SideType.BOTH, extension, res, null, false);
+				else
+					content = res;
+				parser.dequeue(element);
+				return (true);
+			}
+			catch (e) {
+				return (false);
+			}
+		}
+
+		parser.wait(context);
+		context.outputType = extension;
+
+		if (!readIncludeFile(parser, element, filename, extension)) {
+			for (var i = 0; i < options.includes.length; i++) {
+				var newName = options.includes[i] + context.attrs.href;
+				if (readIncludeFile(parser, element, newName, extension)) {
+					found = true;
+					break;
+				}
+			}		
+		}
+		else 						{ found = true; }
+		if (found === false) 		{ throw Error('file not found <' + context.attrs.href + '>'); }
+		if (putInBuffer == false)	{ return (content); }
+	}
 
 
 	class Element {
@@ -481,48 +519,12 @@ module Webkool {
 			var extension = '.' + filename.split('.').pop();
 
 			console.log('# including ' + this.attrs.href);
-			if (extension == '.wk') {
-				parser.wait(this);
-				this.outputType = '.wk'
-				doParseDocument(filename, function (buffers) {
-					element.preparedBuffers = buffers;
-					parser.dequeue(element);
-				});
-			}
-			else {
-				parser.wait(this);
-				this.outputType = extension;
-				var readIncludeFile = function (parser, element, filename, extension) {
-					try {
-						var res = '/* include ' + filename + ' */\n';
-							res += fs.readFileSync(filename, 'utf-8');
-						element.preparedBuffers.write(SideType.BOTH, extension, res, null, false);
-						parser.dequeue(element);
-						return (true);
-					}
-					catch (e) {
-						return (false);
-					}
-				}
-				var found = false;
-
-				if (!readIncludeFile(parser, element, filename, extension)) {
-					for (var i = 0; i < options.includes.length; i++) {
-						var newName = options.includes[i] + this.attrs.href;
-						if (readIncludeFile(parser, element, newName, extension)) {
-							found = true;
-							break;
-						}
-					}
-					
-				}
-				else {
-					found = true;
-				}
-				if (found === false) {
-					throw Error('file not found <' + this.attrs.href + '>');
-				}
-			}
+			parser.wait(this);
+			this.outputType = '.wk'
+			doParseDocument(filename, function (buffers) {
+				element.preparedBuffers = buffers;
+				parser.dequeue(element);
+			});
 		}
 
 		printBody(buffers: BufferManager, side: SideType) {
@@ -584,58 +586,91 @@ module Webkool {
 
 	class Script extends Element {
 		elementRules = {};
-		elementAttrs = [];
+		elementAttrs = ['href'];
+		preparedBuffers;
 		name = 'script';
 
 		constructor(parser, name, attrs, filename) {
 			super(parser, name, attrs, filename);
+			this.preparedBuffers = new BufferManager();
+		}
+
+		public prepare(parser) {
+			this.checkAttrs(this.attrs, this.location, this.name);
+			if (this.attrs.hasOwnProperty('href'))
+				loadExternFile(this, parser, this.attrs.href, true);
+			this.outputType = '.js';
 		}
 
 		printBody(buffers: BufferManager, side: SideType) {
-			var data = this.text;
+			if (this.attrs.hasOwnProperty('href'))
+				buffers.merge(side, this.preparedBuffers, this.location.line);
+			else {
+				var data = this.text;
 
-			var newLocation = {
-				line: 	this.location.line,
-				col: 	this.location.col,
-				file: 	relativePath(this.location.file)
-			};
+				var newLocation = {
+					line: 	this.location.line,
+					col: 	this.location.col,
+					file: 	relativePath(this.location.file)
+				};
 
-			buffers.write(side, this.outputType, data, newLocation, true);
+				buffers.write(side, this.outputType, data, newLocation, true);
+			}
 		}
 	}
 
 	class Stylesheet extends Element {
 		elementRules = {};
-		elementAttrs = ['system'];
+		elementAttrs = ['system', 'href'];
 		name = 'stylesheet';
 		outputType = '.css';
+		preparedBuffers;
 
 		constructor(parser, name, attrs, filename) {
 			super(parser, name, attrs, filename);
 			if (this.attrs.hasOwnProperty('system') && styleSheetEngine.hasOwnProperty(this.attrs.system))
 				this.outputType = '.' + this.attrs.system;
+			this.preparedBuffers = new BufferManager();
 		}
 		
-		printBody(buffers: BufferManager, side: SideType) {
-			var data = '';
-		
-			data += this.text;
+		public prepare(parser) {
+			this.checkAttrs(this.attrs, this.location, this.name);
+			if (this.attrs.hasOwnProperty('href'))
+				loadExternFile(this, parser, this.attrs.href, true);
+		}
 
-			buffers.write(side, this.outputType, data, null, false);
+
+		printBody(buffers: BufferManager, side: SideType) {
+			if (this.attrs.hasOwnProperty('href'))
+				buffers.merge(side, this.preparedBuffers, this.location.line);
+			else {
+				var data = '';
+			
+				data += this.text;
+
+				buffers.write(side, this.outputType, data, null, false);
+			}
 		}
 	}
 
 	class Template extends Element {
 		elementRules = {};
-		elementAttrs = ['system', 'id'];
+		elementAttrs = ['system', 'id', 'href'];
 		name = 'template';
 		templateName = 'square';
+		templateContent;
 
 		constructor(parser, name, attrs, filename) {
 			super(parser, name, attrs, filename);
 			if (this.attrs.hasOwnProperty('system') && templateEngine.hasOwnProperty(this.attrs.system))
-				this.templateName = this.attrs.system;
-			
+				this.templateName = this.attrs.system;			
+		}
+
+		public prepare(parser) {
+			this.checkAttrs(this.attrs, this.location, this.name);
+			if (this.attrs.hasOwnProperty('href'))
+				this.templateContent = loadExternFile(this, parser, this.attrs.href, false);
+			this.outputType = '.js';
 		}
 
 		public printHeader(buffers: BufferManager, side: SideType) {
@@ -662,7 +697,12 @@ module Webkool {
 			data += 'on_render';
 			data += ': { value:\n';
 
-			var cleaned = this.text.replace(/\s+/g, ' ');	//for a pretty indentation
+			var cleaned;
+
+			if (this.attrs.hasOwnProperty('href'))
+				cleaned = this.templateContent.replace(/\s+/g, ' ');
+			else
+				cleaned = this.text.replace(/\s+/g, ' ');
 			cleaned = cleaned.replace(/\"/g, '\\\"'); 		//keep \ in file;
 
 			var bufferString = new Buffer(cleaned);
@@ -673,7 +713,6 @@ module Webkool {
 		
 			data += streamBuff.getContentsAsString("utf8");
 			data += '},\n';
-
 
 			buffers.write(side, this.outputType, data, null, false);
 		}

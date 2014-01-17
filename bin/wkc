@@ -308,6 +308,50 @@ else
     /*
     **	Nodes
     */
+    function loadExternFile(context, parser, filename, putInBuffer) {
+        var found = false;
+        var element = context;
+        var extension = '.' + filename.split('.').pop();
+        var content = '';
+        var readIncludeFile = function (parser, element, filename, extension) {
+            try  {
+                var res = '';
+                if (putInBuffer == true)
+                    res += '/* include ' + filename + ' */\n';
+                res += fs.readFileSync(filename, 'utf-8');
+                if (putInBuffer == true)
+                    element.preparedBuffers.write(SideType.BOTH, extension, res, null, false);
+else
+                    content = res;
+                parser.dequeue(element);
+                return (true);
+            } catch (e) {
+                return (false);
+            }
+        };
+
+        parser.wait(context);
+        context.outputType = extension;
+
+        if (!readIncludeFile(parser, element, filename, extension)) {
+            for (var i = 0; i < options.includes.length; i++) {
+                var newName = options.includes[i] + context.attrs.href;
+                if (readIncludeFile(parser, element, newName, extension)) {
+                    found = true;
+                    break;
+                }
+            }
+        } else {
+            found = true;
+        }
+        if (found === false) {
+            throw Error('file not found <' + context.attrs.href + '>');
+        }
+        if (putInBuffer == false) {
+            return (content);
+        }
+    }
+
     var Element = (function () {
         function Element(parser, name, attrs, filename) {
             this.line = parser.getCurrentLineNumber();
@@ -411,44 +455,12 @@ else
             var extension = '.' + filename.split('.').pop();
 
             console.log('# including ' + this.attrs.href);
-            if (extension == '.wk') {
-                parser.wait(this);
-                this.outputType = '.wk';
-                doParseDocument(filename, function (buffers) {
-                    element.preparedBuffers = buffers;
-                    parser.dequeue(element);
-                });
-            } else {
-                parser.wait(this);
-                this.outputType = extension;
-                var readIncludeFile = function (parser, element, filename, extension) {
-                    try  {
-                        var res = '/* include ' + filename + ' */\n';
-                        res += fs.readFileSync(filename, 'utf-8');
-                        element.preparedBuffers.write(SideType.BOTH, extension, res, null, false);
-                        parser.dequeue(element);
-                        return (true);
-                    } catch (e) {
-                        return (false);
-                    }
-                };
-                var found = false;
-
-                if (!readIncludeFile(parser, element, filename, extension)) {
-                    for (var i = 0; i < options.includes.length; i++) {
-                        var newName = options.includes[i] + this.attrs.href;
-                        if (readIncludeFile(parser, element, newName, extension)) {
-                            found = true;
-                            break;
-                        }
-                    }
-                } else {
-                    found = true;
-                }
-                if (found === false) {
-                    throw Error('file not found <' + this.attrs.href + '>');
-                }
-            }
+            parser.wait(this);
+            this.outputType = '.wk';
+            doParseDocument(filename, function (buffers) {
+                element.preparedBuffers = buffers;
+                parser.dequeue(element);
+            });
         };
 
         Include.prototype.printBody = function (buffers, side) {
@@ -513,19 +525,31 @@ else
         function Script(parser, name, attrs, filename) {
             _super.call(this, parser, name, attrs, filename);
             this.elementRules = {};
-            this.elementAttrs = [];
+            this.elementAttrs = ['href'];
             this.name = 'script';
+            this.preparedBuffers = new BufferManager();
         }
+        Script.prototype.prepare = function (parser) {
+            this.checkAttrs(this.attrs, this.location, this.name);
+            if (this.attrs.hasOwnProperty('href'))
+                loadExternFile(this, parser, this.attrs.href, true);
+            this.outputType = '.js';
+        };
+
         Script.prototype.printBody = function (buffers, side) {
-            var data = this.text;
+            if (this.attrs.hasOwnProperty('href'))
+                buffers.merge(side, this.preparedBuffers, this.location.line);
+else {
+                var data = this.text;
 
-            var newLocation = {
-                line: this.location.line,
-                col: this.location.col,
-                file: relativePath(this.location.file)
-            };
+                var newLocation = {
+                    line: this.location.line,
+                    col: this.location.col,
+                    file: relativePath(this.location.file)
+                };
 
-            buffers.write(side, this.outputType, data, newLocation, true);
+                buffers.write(side, this.outputType, data, newLocation, true);
+            }
         };
         return Script;
     })(Element);
@@ -535,18 +559,29 @@ else
         function Stylesheet(parser, name, attrs, filename) {
             _super.call(this, parser, name, attrs, filename);
             this.elementRules = {};
-            this.elementAttrs = ['system'];
+            this.elementAttrs = ['system', 'href'];
             this.name = 'stylesheet';
             this.outputType = '.css';
             if (this.attrs.hasOwnProperty('system') && styleSheetEngine.hasOwnProperty(this.attrs.system))
                 this.outputType = '.' + this.attrs.system;
+            this.preparedBuffers = new BufferManager();
         }
+        Stylesheet.prototype.prepare = function (parser) {
+            this.checkAttrs(this.attrs, this.location, this.name);
+            if (this.attrs.hasOwnProperty('href'))
+                loadExternFile(this, parser, this.attrs.href, true);
+        };
+
         Stylesheet.prototype.printBody = function (buffers, side) {
-            var data = '';
+            if (this.attrs.hasOwnProperty('href'))
+                buffers.merge(side, this.preparedBuffers, this.location.line);
+else {
+                var data = '';
 
-            data += this.text;
+                data += this.text;
 
-            buffers.write(side, this.outputType, data, null, false);
+                buffers.write(side, this.outputType, data, null, false);
+            }
         };
         return Stylesheet;
     })(Element);
@@ -556,12 +591,19 @@ else
         function Template(parser, name, attrs, filename) {
             _super.call(this, parser, name, attrs, filename);
             this.elementRules = {};
-            this.elementAttrs = ['system', 'id'];
+            this.elementAttrs = ['system', 'id', 'href'];
             this.name = 'template';
             this.templateName = 'square';
             if (this.attrs.hasOwnProperty('system') && templateEngine.hasOwnProperty(this.attrs.system))
                 this.templateName = this.attrs.system;
         }
+        Template.prototype.prepare = function (parser) {
+            this.checkAttrs(this.attrs, this.location, this.name);
+            if (this.attrs.hasOwnProperty('href'))
+                this.templateContent = loadExternFile(this, parser, this.attrs.href, false);
+            this.outputType = '.js';
+        };
+
         Template.prototype.printHeader = function (buffers, side) {
             if (this.attrs.hasOwnProperty('id')) {
                 if (Handler.prototype.isPrototypeOf(this.parent))
@@ -585,7 +627,12 @@ else
             data += 'on_render';
             data += ': { value:\n';
 
-            var cleaned = this.text.replace(/\s+/g, ' ');
+            var cleaned;
+
+            if (this.attrs.hasOwnProperty('href'))
+                cleaned = this.templateContent.replace(/\s+/g, ' ');
+else
+                cleaned = this.text.replace(/\s+/g, ' ');
             cleaned = cleaned.replace(/\"/g, '\\\"');
 
             var bufferString = new Buffer(cleaned);

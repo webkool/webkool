@@ -12,15 +12,7 @@
 				model.plop = 2;
 			</on>
 
-			<template system="square">
-				<![CDATA[
-					#{include("/header")}#
-						<h1>BASIC PAGE #plop#</h1>
-						<h2>subtitle</h2>
-						<h3>sub-subtitle</h3>
-					#{include("/footer")}#
-				]]>
-			</template>
+			<template href='slash.html' system="square"></template>
 		</handler>
 
 		<handler url="/plop.client.css" type="text/css">
@@ -48,31 +40,7 @@
 		]]>
 	</template>
 
-	<stylesheet system="less">
-		<![CDATA[
-			@size: 	2px;
-			h1 {
-				background: 	#414141;
-				color: 			white;
-				border: 		@size;
-			}
-		]]>
-	</stylesheet>
-	<stylesheet system="sass">
-		<![CDATA[
-			$size: 	1px;
-			h2 {
-				background: 	#424242;
-				color: 			white;
-				border: 		$size;
-			}
-		]]>
-	</stylesheet>
-	<stylesheet system="css">
-		<![CDATA[
-			h3 {
-				border: 		1px;
-			}
-		]]>
-	</stylesheet>
+	<stylesheet href='style.less' system="less"></stylesheet>
+	<script href='plop.js'></script>
+
 </application>
