@@ -1041,7 +1041,7 @@ module Webkool {
 	function getDataFromSourceMap(sourceMap, side, type) {
 		if (typeof sourceMap[type] === 'undefined' || typeof sourceMap[type][side] === 'undefined')
 			return ('');
-		return (JSON.stringify(sourceMap[type][side].toStringWithSourceMap({ file: ['.webkool.wk'] }).map));
+		return (JSON.stringify(sourceMap[type][side].toStringWithSourceMap({ file: ['webkool.wk'] }).map));
 	}
 
 	function createFilesForSide(side:SideType, buffers:BufferManager, name) {
@@ -1135,19 +1135,19 @@ module Webkool {
 	export function run() {
 		//feed the option object with the command line;
 		doParseArguments(options);
-		//create a .webkool.wk file if it doesn't exist.
+		//create a webkool.wk file if it doesn't exist.
 
 		var entryPoint = options.inputs.shift();
 		var rootPath = entryPoint.substr(0, entryPoint.lastIndexOf('/'));
 		if (rootPath.length > 0) {
 			rootPath += '/';
 		}
-		var webkoolFile = rootPath + '.webkool.wk';
+		var webkoolFile = rootPath + 'webkool.wk';
 
 		options.includes.push(rootPath);
 		checkWebKoolWkFileExistence(webkoolFile);
 		generateSourceMapFolder(options.output);
-		//begin the parsing of .webkool.wk
+		//begin the parsing of webkool.wk
 
 
 		doParseDocument(webkoolFile, function (initialBuffers:BufferManager) {
