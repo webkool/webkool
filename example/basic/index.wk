@@ -6,21 +6,20 @@
 	<client>
 	</client>
 	<server>
-
+		<include href='inside/server.wk' />
 		<handler url="/" type="text/html">
-			<on id="request">
-				model.plop = 2;
+			<on id='request'>
+				model.plop = 2
 			</on>
-
-			<template href='slash.html' system="square"></template>
+			<template system="square">
+				<![CDATA[
+					#{include("/header")}#
+					<h2>hello world #plop#</h2>
+					#{include("/footer")}#
+				]]>
+			</template>
 		</handler>
 
-		<handler url="/plop.client.css" type="text/css">
-			<on id="render">
-				var css = require('fs').readFileSync('plop.client.css');
-				return (css.toString());
-			</on>
-		</handler>
 	
 	</server>
 	<template id="/header" system="square">
@@ -28,7 +27,6 @@
 			<html>
 				<head>
 					<title>Basic</title>
-					<link href="plop.client.css" rel="stylesheet" type="text/css" />
 				</head>
 				<body>
 		]]>
@@ -41,6 +39,5 @@
 	</template>
 
 	<stylesheet href='style.less' system="less"></stylesheet>
-	<script href='plop.js'></script>
 
 </application>

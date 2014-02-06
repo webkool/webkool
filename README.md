@@ -64,3 +64,7 @@ open-source platform to develop client and/or server web application.
 -	source map support for client
 - 	jshint code validation
 - 	patch for stylesheet attribute, relative path, -o and --hint options
+
+**0.2.1**:
+
+-	source-map path fix
