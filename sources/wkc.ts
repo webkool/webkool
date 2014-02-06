@@ -548,7 +548,7 @@ module Webkool {
 			console.log('# including ' + filename);
 			parser.wait(this);
 			this.outputType = '.wk'
-			doParseDocument(filename, function (buffers) {
+			doParseDocument(this.attrs.href, function (buffers) {
 				element.preparedBuffers = buffers;
 				parser.dequeue(element);
 			});

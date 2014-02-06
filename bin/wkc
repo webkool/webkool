@@ -33,7 +33,7 @@ var Webkool;
     /*
     ** Template and Css Engine
     */
-    var version = '0.2.0';
+    var version = '0.2.1';
 
     var templateEngine = {
         'square': require('../lib/square'),
@@ -462,7 +462,7 @@ else
             console.log('# including ' + filename);
             parser.wait(this);
             this.outputType = '.wk';
-            doParseDocument(filename, function (buffers) {
+            doParseDocument(this.attrs.href, function (buffers) {
                 element.preparedBuffers = buffers;
                 parser.dequeue(element);
             });
