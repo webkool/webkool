@@ -68,3 +68,7 @@ open-source platform to develop client and/or server web application.
 **0.2.1**:
 
 -	source-map path fix
+
+**0.2.2**:
+
+-	output name fix

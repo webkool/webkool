@@ -6,7 +6,7 @@
 	<client>
 	</client>
 	<server>
-		<include href='inside/server.wk' />
+		<include href='server.wk' />
 		<handler url="/" type="text/html">
 			<on id='request'>
 				model.plop = 2

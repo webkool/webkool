@@ -5,35 +5,6 @@
 		- fs
 		- ./square.js
 
-	todo:
-	√	-mettre a jour le README
-	√	-mettre a jour la version dans wkc.ts
-		-mettre au propre la partie example
-		-verifier
-		-supprimer todo
-		-publier
-
-		-modifier le path
-
-		LA VERSION ACTUEL NE MARCHE PAS!!!
-
-		TODO:
-			- mettre en place les chemins relatifs dans source-map.sources[]:
-				- mise en place sur des chemin simple
-				- sur des include un peu chelou
-			- ne plsuscopier les fichier dans le dossier source-map;
-			- suivant le resultant de jshint:
-				- ok => swap les .tmp
-			(ne jammais suprmer les fichier tmp, toujour les ecraser);
-			(ca serais mieux de les mettre en fichier cachee.)
-			- si tout s'est bien passe, passer les .tmp en normal
-			- supprimer les .tmp
-			- modifier les .tmp dans les fichiers
-				-lien en fin de .js/css: sourceMappingURL=source-map/plop.server.js.map.tmp
-			- copier les fichiers utilisé dans le dossier source-map
-			- test simple
-			- test fourbe
-
 
 
 */
@@ -76,7 +47,7 @@ module Webkool {
 	** Template and Css Engine
 	*/
 	
-	var version = '0.2.1'; 						//current version
+	var version = '0.2.2'; 						//current version
 
 	var templateEngine = {
 		'square':	require('../lib/square'), 	//internal square templating module
@@ -642,7 +613,6 @@ module Webkool {
 					col: 	this.location.col,
 					file: 	getRelativePath(this.location.file)
 				};
-//				console.log('SCRIPT:');
 				getRelativePath(this.location.file);
 				buffers.write(side, this.outputType, data, newLocation, true);
 			}
@@ -1083,10 +1053,35 @@ module Webkool {
 		return (rel);
 	}
 
-	function createFilesForSide(side:SideType, buffers:BufferManager) {
+	function getOutputName(side:SideType) {
+		var filename = pathm.resolve(options.output);
+
+		if (options.output[options.output.length - 1] == '/')
+			filename += '/';
+
+		if (side == SideType.CLIENT) {
+			var client = filename + ((filename[filename.length - 1] == '/') ? ('client') : (''));
+			return ([client, null]);
+		}
+		if (side == SideType.SERVER) {
+			var server = filename + ((filename[filename.length - 1] == '/') ? ('server') : (''));
+			return ([null, server]);
+		}
 		if (side == SideType.BOTH) {
-			var rs = createFilesForSide(SideType.SERVER, buffers);
-			var rc = createFilesForSide(SideType.CLIENT, buffers);
+			var client = filename + ((filename[filename.length - 1] == '/') ? ('') : ('.')) + 'client';
+			var server = filename + ((filename[filename.length - 1] == '/') ? ('') : ('.')) + 'server';
+			return ([client, server]);
+		}
+		else {
+			return (null);
+		}
+
+	}
+
+	function createFilesForSide(side:SideType, buffers:BufferManager, filename) {
+		if (side == SideType.BOTH) {
+			var rs = createFilesForSide(SideType.SERVER, buffers, filename[1]);
+			var rc = createFilesForSide(SideType.CLIENT, buffers, filename[0]);
 			if (rc && rs) {
 				return ([rs[0].concat(rc[0]), rs[1].concat(rc[1])]);
 			}
@@ -1101,14 +1096,7 @@ module Webkool {
 				if (buff[i].side == side && (buff[i].name == '.js' || buff[i].name == '.css')) {
 
 
-					var sideStr = (side == SideType.SERVER) ? ('server') : ('client');
-					var fileName;
-					if (options.output.length > 0) {
-						var filenameBase = (options.output[options.output.length - 1] == '/') ? (options.output) : (pathm.dirname(options.output));
-						fileName = pathm.resolve(filenameBase, ((options.output[options.output.length - 1] == '/') ? (sideStr) : (pathm.basename(options.output) + '.' + sideStr)) + buff[i].name);
-					}
-					else
-						fileName = pathm.resolve(sideStr + buff[i].name);
+					var fileName = filename + buff[i].name;
 					var basename = pathm.basename(fileName);
 					var dirnameF = pathm.dirname(fileName);
 					var dirnameO = pathm.dirname(options.output);
@@ -1190,7 +1178,10 @@ module Webkool {
 	function 	addFileInSourceMapFolder(file, where) {
 		try {
 			var name = file.substr(file.lastIndexOf('/') + 1);
-			var sm = pathm.resolve(pathm.dirname(options.output), 'source-map/' + name);
+
+			var dir = getOutputDir(options.output);
+			var sm = dir + 'source-map/' + name;
+
 			var fin = fs.createReadStream(file);
 			var fout = fs.createWriteStream(sm);
 
@@ -1198,6 +1189,15 @@ module Webkool {
 		}
 		catch (e) {
 		}
+	}
+
+	function 	getOutputDir(str) {
+		var filename = pathm.resolve(str);
+		if (str[str.length - 1] == '/') { filename += '/' }
+		else {
+			filename = filename.substr(0, filename.lastIndexOf('/')) + '/';
+		}
+		return (filename);
 	}
 
 	function  	moveTmp(tmpFiles) {
@@ -1217,16 +1217,25 @@ module Webkool {
 		tmpFiles.forEach(function (itm) {
 			var filename = itm.substr(0, itm.length - '.tmp'.length);
 			fs.readFile(filename, function (err, data) {
-				var res = data.toString().replace(/(\/\/# sourceMappingURL=.+)\.tmp$/, '$1');
-				fs.writeFileSync(filename, res);
+				if (!err) {
+					var res = data.toString().replace(/(\/\/# sourceMappingURL=.+)\.tmp$/, '$1');
+					fs.writeFileSync(filename, res);
+				}
+				else {
+					console.log('error with file ' + filename);
+				}
 			});
 		});
 		tmpFilesSourceMap.forEach(function (itm) {
 			var filename = itm.substr(0, itm.length - '.tmp'.length);
 			fs.readFile(filename, function (err, data) {
-				var res = JSON.parse(data.toString());
-				res.file = res.file.substr(0, res.file.length - '.tmp'.length);
-				fs.writeFileSync(filename, JSON.stringify(res));
+				if (!err) {
+					var res = JSON.parse(data.toString());
+					res.file = res.file.substr(0, res.file.length - '.tmp'.length);
+					fs.writeFileSync(filename, JSON.stringify(res));
+				}
+				else
+					console.log('error with file ' + filename);
 			});
 		});
 	}
@@ -1261,12 +1270,13 @@ module Webkool {
 
 				var tmpFiles = [];
 				//write in file
+
 				if (options.client && !options.server)
-					tmpFiles = createFilesForSide(SideType.CLIENT, _buffers);
+					tmpFiles = createFilesForSide(SideType.CLIENT, _buffers, getOutputName(SideType.CLIENT)[0]);
 				if (options.server && !options.client)
-					tmpFiles = createFilesForSide(SideType.SERVER, _buffers);
+					tmpFiles = createFilesForSide(SideType.SERVER, _buffers, getOutputName(SideType.SERVER)[1]);
 				if ((options.server && options.client) || (!options.server && !options.client))
-					tmpFiles = createFilesForSide(SideType.BOTH, _buffers);
+					tmpFiles = createFilesForSide(SideType.BOTH, _buffers, getOutputName(SideType.BOTH));
 				if (tmpFiles != null) {
 					moveTmp(tmpFiles[0].concat(tmpFiles[1]));
 					replaceTmpInFile(tmpFiles[0], tmpFiles[1]);
