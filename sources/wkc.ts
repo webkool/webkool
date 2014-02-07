@@ -5,7 +5,12 @@
 		- fs
 		- ./square.js
 
-
+	- problem:
+		-bad path affichage d'erreur jshint:
+			-.tmp.tmp
+			- mauvai chemin
+		- passer tout en chemin absolut
+		- remplacer tout les appel manel a des path
 
 */
 
@@ -70,9 +75,11 @@ module Webkool {
 	var jshint	= require('jshint').JSHINT; 	//output syntax validation
 	var fs 		= require('fs');				//filesystem access
 	var pathm 	= require('path');				
+	var async	= require('async');
 
 	var outputJS,
 		outputCSS,
+		pr,
 		options = { 							//command line options
 			client:		false,
 			server: 	false,
@@ -105,12 +112,11 @@ module Webkool {
 				var fullPath = pathm.resolve(pathm.dirname(output));
 
 				if (location.line != null) {
-					var path = pathm.resolve(fullPath, pathm.relative(fullPath, location.source));
-				
+					var path = pathm.resolve(fullPath, pathm.relative(fullPath, location.source));					
 					console.log(itm.id, itm.code, itm.reason, 'in file', path + ':' + location.line + ':' + location.column);
 				}
 				else {
-					var path = pathm.resolve(fullPath, pathm.relative(fullPath, sourceMap.file + '.tmp'));
+					var path = pathm.resolve(fullPath, pathm.relative(fullPath, sourceMap.file));
 					console.log(itm.id, itm.code, itm.reason, 'in file', path + ':' + itm.line + ':' + itm.character);
 				}
 			}
@@ -122,6 +128,133 @@ module Webkool {
 	**	BufferManager
 	*/
 
+	class PathRes {
+		output:string;
+		root:string;
+		file:string;
+		sm:string;
+		side:SideType;
+		currentFolder:string;
+
+		constructor(output) {
+			this.output = output;
+			this.root = this.getDirFromPath(output);
+			this.file = this.getFileFromPath(output);
+			this.sm = this.root + 'source-map/';
+			this.currentFolder = pathm.resolve() + '/';
+		}
+
+		public getRoot() {
+			return (this.root);
+		}
+
+		public getSide(client:boolean, server:boolean) {
+			return ((client && server) || (!client && !server)) ? 
+				(SideType.BOTH) : 
+				((client) ? (SideType.CLIENT) : (SideType.SERVER));
+		}
+
+		public getFile() {
+			return (this.file);
+		}
+
+		public getOutputFile(side) {
+			var filename = this.file;
+			var client = null;
+			var server = null;
+
+			if (side == SideType.CLIENT)
+				client = filename + ((filename[filename.length - 1] == '/') ? ('client') : (''));
+			if (side == SideType.SERVER)
+				server = filename + ((filename[filename.length - 1] == '/') ? ('server') : (''));
+			if (side == SideType.BOTH) {
+				client = filename + ((filename[filename.length - 1] == '/') ? ('') : ('.')) + 'client';
+				server = filename + ((filename[filename.length - 1] == '/') ? ('') : ('.')) + 'server';
+			}
+			return ([client, server]);	
+		}
+
+		public getSourceMap() {
+			return (this.sm);
+		}
+		public getCurrentFolder() {
+			return (this.currentFolder);
+		}
+
+		public getSourceMapName(side) {
+			var filename = this.sm + this.file;
+			var client = null;
+			var server = null;
+
+			if (side == SideType.CLIENT)
+				client = filename + ((filename[filename.length - 1] == '/') ? ('client') : (''));
+			if (side == SideType.SERVER)
+				server = filename + ((filename[filename.length - 1] == '/') ? ('server') : (''));
+			if (side == SideType.BOTH) {
+				client = filename + ((filename[filename.length - 1] == '/') ? ('') : ('.')) + 'client';
+				server = filename + ((filename[filename.length - 1] == '/') ? ('') : ('.')) + 'server';
+			}
+			return ([client, server]);			
+		}
+
+		public getOutputName(side) {
+			var filename = this.root + this.file;
+			var client = null;
+			var server = null;
+
+			if (side == SideType.CLIENT)
+				client = filename + ((filename[filename.length - 1] == '/') ? ('client') : (''));
+			if (side == SideType.SERVER)
+				server = filename + ((filename[filename.length - 1] == '/') ? ('server') : (''));
+			if (side == SideType.BOTH) {
+				client = filename + ((filename[filename.length - 1] == '/') ? ('') : ('.')) + 'client';
+				server = filename + ((filename[filename.length - 1] == '/') ? ('') : ('.')) + 'server';
+			}
+			return ([client, server]);
+		}
+
+		public resolve(that, path) {
+			var res = pathm.resolve(that + path);
+			if (path.length === 0)
+				return (this.root);
+
+			else if (path[path.length - 1] == '/')
+				return (res + '/');
+			return (res);
+		}
+
+		public resolveCheck(file, inc) {
+			var np = '';
+			for (var i = 0; i < inc.length; i++) {
+				np = pathm.resolve(inc[i] + file);
+				if (fs.existsSync(np))
+					return (np);
+			}
+			return (null);
+		}
+
+		public 	getRelative(p1, p2) {
+			return (pathm.relative(p1, p2));
+		}
+
+		public getDirFromPath(path) {
+			var res = pathm.resolve(path) + (path == '' ? '/' : '');
+			if (path.length > 0 && res[res.length - 1] != '/' && path[path.length - 1] == '/')
+				res += '/';
+			if (path.length > 0 && path[path.length - 1] != '/')
+				res = res.substr(0, res.lastIndexOf('/')) + '/';
+			return (res);
+		}
+
+		public getFileFromPath(path) {
+			var file = '';
+			var res = pathm.resolve(path) + (path == '' ? '/' : '');
+			if (path.length > 0 && path[path.length - 1] != '/')
+				file = res.substr(res.lastIndexOf('/') + 1);
+			return (file);
+		}
+
+	}
 
 	class BufferManager { 						//Manage all output soure code using a buffer system (one pass system)
 		private 		buffers;
@@ -267,12 +400,12 @@ module Webkool {
 			if (typeof buff !== 'undefined') {
 				for (var i = 0; i < buff.data.length; i++) {
 					var elm = buff.data[i];
-
 					if (elm.data instanceof Array) {
 						generatedLine = this.profoundToSourceMap(map, generatedLine, elm.data);
 					}
 					else {
 						if (elm.info != null) {
+
 							map.addMapping({
 								generated:  {
 									line: 	generatedLine,
@@ -512,14 +645,13 @@ module Webkool {
 		public prepare(parser) {
 			this.checkAttrs(this.attrs, this.location, this.name);
 			var element = this;
-			var filename = pathm.resolve(pathm.dirname(this.location.file), this.attrs.href);
+			var filename = pr.resolveCheck(this.attrs.href, options.includes);
 
 			var extension = pathm.extname(filename);
-
 			console.log('# including ' + filename);
 			parser.wait(this);
 			this.outputType = '.wk'
-			doParseDocument(this.attrs.href, function (buffers) {
+			doParseDocument(filename, function (buffers) {
 				element.preparedBuffers = buffers;
 				parser.dequeue(element);
 			});
@@ -547,10 +679,8 @@ module Webkool {
 			var newLocation = {
 				line: 	this.location.line,
 				col: 	this.location.col,
-				file: 	getRelativePath(this.location.file)
+				file: 	pr.resolveCheck(this.location.file, options.includes)
 			};
-//			console.log('ON:')
-			getRelativePath(this.location.file);
 
 			buffers.write(side, this.outputType, begin, null, false);
 			buffers.write(side, this.outputType, middle, newLocation, true);
@@ -611,9 +741,8 @@ module Webkool {
 				var newLocation = {
 					line: 	this.location.line,
 					col: 	this.location.col,
-					file: 	getRelativePath(this.location.file)
+					file: 	pr.resolveCheck(this.location.file, options.includes)
 				};
-				getRelativePath(this.location.file);
 				buffers.write(side, this.outputType, data, newLocation, true);
 			}
 		}
@@ -909,7 +1038,6 @@ module Webkool {
 		if (argv.o)
 			options.output = (argv.o instanceof Array) ? (argv.o.splice(-1)) : (argv.o);
 
-
 		argv._.forEach(function (elm) { options.inputs.push(elm) });
 	}
 
@@ -955,7 +1083,7 @@ module Webkool {
 		var parser = new expat.Parser('UTF-8');
 		parser.currentElement = null;
 		parser.currentText = '';
-		filename = getPath(filename);
+		filename = pr.resolveCheck(filename, options.includes);
 
 		addFileInSourceMapFolder(filename, options.output);
 		parser.roots = new Roots(parser, 'roots', null, filename);
@@ -1006,29 +1134,6 @@ module Webkool {
 		parser.input.pipe(parser);
 	}
 
-	function getPath(filename) {
-		var path;
-		var folder;
-
-		for (var i = 0; i < options.includes.length; i+= 1) {
-			folder = options.includes[i];
-			try {
-				path = pathm.resolve(folder, filename);
-				fs.statSync(path);
-				
-				return (path);
-			}
-			catch (unused) {
-				continue;
-			}
-		}
-		console.log('// file not found ' + filename);
-	}
-
-	function relativePath(path) {
-		return (path.substr(path.lastIndexOf('/') + 1));
-	}
-
 
 	function checkWebKoolWkFileExistence(filename) {
 		try {
@@ -1043,14 +1148,6 @@ module Webkool {
 		if (typeof sourceMap[type] === 'undefined' || typeof sourceMap[type][side] === 'undefined')
 			return ('');
 		return (JSON.stringify(sourceMap[type][side].toStringWithSourceMap({ file: ['webkool.wk'] }).map));
-	}
-
-	function getRelativePath(here) {
-		var filenameBase = (options.output[options.output.length - 1] == '/') ? (options.output) : (pathm.dirname(options.output));
-		var diff = pathm.relative(filenameBase, here);
-		var filename = pathm.resolve(filenameBase, pathm.dirname(here));
-		var rel = pathm.relative(filename, diff);
-		return (rel);
 	}
 
 	function getOutputName(side:SideType) {
@@ -1078,16 +1175,21 @@ module Webkool {
 
 	}
 
-	function createFilesForSide(side:SideType, buffers:BufferManager, filename) {
+
+	function createFilesForSide(side:SideType, buffers:BufferManager, filename, smfilename) {
 		if (side == SideType.BOTH) {
-			var rs = createFilesForSide(SideType.SERVER, buffers, filename[1]);
-			var rc = createFilesForSide(SideType.CLIENT, buffers, filename[0]);
+			var rs = createFilesForSide(SideType.SERVER, buffers, filename[1], smfilename[1]);
+			var rc = createFilesForSide(SideType.CLIENT, buffers, filename[0], smfilename[0]);
 			if (rc && rs) {
 				return ([rs[0].concat(rc[0]), rs[1].concat(rc[1])]);
 			}
 			return (null);
 		}
 		else {
+			if (Array.isArray(filename))
+				filename = (side == SideType.CLIENT) ? (filename[0]) : (filename[1]);
+			if (Array.isArray(smfilename))
+				smfilename = (side == SideType.CLIENT) ? (smfilename[0]) : (smfilename[1]);
 			var errorInFile = false;
 			var tmpFiles = [];
 			var tmpFilesSourceMap = [];
@@ -1095,40 +1197,40 @@ module Webkool {
 			for (var i = 0; i < buff.length; i++) {
 				if (buff[i].side == side && (buff[i].name == '.js' || buff[i].name == '.css')) {
 
-
-					var fileName = filename + buff[i].name;
-					var basename = pathm.basename(fileName);
-					var dirnameF = pathm.dirname(fileName);
-					var dirnameO = pathm.dirname(options.output);
-					var resolved = pathm.resolve(dirnameO);
-
-					var sourcepath 		= pathm.resolve(dirnameF, 'source-map/' + basename + '.map.tmp');
-					var stdpath 		= fileName + '.tmp';
-					var relSourcepath 	= pathm.relative(pathm.dirname(stdpath), sourcepath);
-					var relStdpath		= pathm.relative(pathm.dirname(sourcepath), stdpath);
-
 					var txt 				= buffers.toString(side, buff[i].name);
-					var sourceMap 			= buffers.toSourceMap(side, buff[i].name, relStdpath);
+					
+					var ext 				= buff[i].name + '.tmp';
+					var extsm  				= buff[i].name + '.map.tmp';
+
+					var relSource 			= pr.getRelative(pr.getSourceMap(), pr.getRoot()) + '/' + filename.substr(filename.lastIndexOf('/') + 1) + ext;
+					var relPath 			= pr.getRelative(pr.getRoot(), pr.getSourceMap()) + '/' + filename.substr(filename.lastIndexOf('/') + 1) + extsm;
+
+					var sourceMap 			= buffers.toSourceMap(side, buff[i].name, relSource);
 					var sourceMapGenerated 	= sourceMap.toString();
 
-					var outputStream  	= fs.createWriteStream(stdpath);
-					var outputStreamMap = fs.createWriteStream(sourcepath);
-						outputStreamMap.write(sourceMapGenerated);
-						console.log('# saving in file ' + sourcepath.substr(0, sourcepath.length - '.tmp'.length));
-						outputStream.write(txt);
-						outputStream.write('//# sourceMappingURL=' + relSourcepath);
-						console.log('# saving in file ' + stdpath.substr(0, stdpath.length - '.tmp'.length));
+					var outputPath 			= filename + ext; 
+					var outputSourceMapPath = smfilename + extsm;
+
+
+
+					txt += '//# sourceMappingURL=' + relPath;
+					fs.writeFile(outputSourceMapPath, sourceMapGenerated);
+					fs.writeFile(outputPath, txt);
+	
+					console.log('# saving in file ' + outputPath.substr(0, outputPath.length - '.tmp'.length));
+					console.log('# saving in file ' + outputSourceMapPath.substr(0, outputSourceMapPath.length - '.tmp'.length));
+
 
 
 					if (buff[i].name == '.js') {
-						if (hint(txt, JSON.parse(sourceMapGenerated), fileName))
-							tmpFiles.push(stdpath);
+						if (hint(txt, JSON.parse(sourceMapGenerated), filename))
+							tmpFiles.push(outputPath);
 						else
 							errorInFile = true;
 					}
 					else
-						tmpFiles.push(stdpath);
-					tmpFilesSourceMap.push(sourcepath);
+						tmpFiles.push(outputPath);
+					tmpFilesSourceMap.push(outputSourceMapPath);
 				}
 			}
 			if (errorInFile)
@@ -1148,11 +1250,11 @@ module Webkool {
 				if (eng != 'css') {
 					var streamBuff = new sbuff.WritableStreamBuffer();
 					var inp = buffers.toString(side, '.' + eng);
-
 					if (inp != '') {
 						styleSheetEngine[eng].compile(inp, streamBuff);
 						var line = buffers.get(side, '.css', true).data.length;
-						buffers.write(side, '.css', streamBuff.getContentsAsString("utf8"), null, false); //tmp infos
+						var data = streamBuff.getContentsAsString("utf8");
+						buffers.write(side, '.css', data, null, false); //tmp infos
 					}
 				}
 			}
@@ -1166,12 +1268,9 @@ module Webkool {
 	}
 
 	function 	generateSourceMapFolder(where) {
-		var folder = where.substr(0, where.lastIndexOf('/'));
-		if (folder.length > 0) {
-			folder += '/';
-		}
+		var folder = pr.getSourceMap();
 		try {
-			fs.mkdirSync(folder + 'source-map');
+			fs.mkdirSync(folder);
 		} catch (ignore) {}
 	}
 
@@ -1179,25 +1278,15 @@ module Webkool {
 		try {
 			var name = file.substr(file.lastIndexOf('/') + 1);
 
-			var dir = getOutputDir(options.output);
-			var sm = dir + 'source-map/' + name;
-
+			var sm = pr.getSourceMap() + name;
 			var fin = fs.createReadStream(file);
 			var fout = fs.createWriteStream(sm);
 
 			fin.pipe(fout);
 		}
 		catch (e) {
+			console.log('error: file not found <' + file + '>');
 		}
-	}
-
-	function 	getOutputDir(str) {
-		var filename = pathm.resolve(str);
-		if (str[str.length - 1] == '/') { filename += '/' }
-		else {
-			filename = filename.substr(0, filename.lastIndexOf('/')) + '/';
-		}
-		return (filename);
 	}
 
 	function  	moveTmp(tmpFiles) {
@@ -1216,43 +1305,89 @@ module Webkool {
 	function 	replaceTmpInFile(tmpFiles, tmpFilesSourceMap) {
 		tmpFiles.forEach(function (itm) {
 			var filename = itm.substr(0, itm.length - '.tmp'.length);
-			fs.readFile(filename, function (err, data) {
-				if (!err) {
+
+			async.waterfall([
+				function (callback) {
+					var data = fs.readFileSync(filename);
+					callback(null, data);
+				},
+				function (data, callback) {
 					var res = data.toString().replace(/(\/\/# sourceMappingURL=.+)\.tmp$/, '$1');
-					fs.writeFileSync(filename, res);
-				}
-				else {
-					console.log('error with file ' + filename);
-				}
-			});
+					callback(null, res);
+				},
+			    function (res, callback) {
+			    	fs.writeFileSync(filename, res);
+			        callback(null);
+			    }
+			]);
+
 		});
 		tmpFilesSourceMap.forEach(function (itm) {
 			var filename = itm.substr(0, itm.length - '.tmp'.length);
-			fs.readFile(filename, function (err, data) {
-				if (!err) {
+
+			async.waterfall([
+				function (callback) {
+					var data = fs.readFileSync(filename);
+					callback(null, data);
+				},
+				function (data, callback) {
 					var res = JSON.parse(data.toString());
 					res.file = res.file.substr(0, res.file.length - '.tmp'.length);
-					fs.writeFileSync(filename, JSON.stringify(res));
-				}
-				else
-					console.log('error with file ' + filename);
-			});
+					for (var i = 0; i < res.sources.length; i++)
+						res.sources[i] = res.sources[i].substr(res.sources[i].lastIndexOf('/') + 1);
+					callback(null, res);
+				},
+			    function (res, callback) {
+			    	fs.writeFileSync(filename, JSON.stringify(res));
+			        callback(null);
+			    }
+			]);
+		});
+	}
+
+	function unitPath() {
+		var paths = [
+			'/plop/lal/toto',
+			'/plop/lal/',
+			'toto',
+			'./',
+			'',
+			'../plop/',
+			'../plop',
+			'plop/lal/toto',
+			'plop/lal/toto/'
+		];
+
+		paths.forEach(function (itm) {
+			console.log('---------------------------');
+			console.log('output: <' + itm + '>');
+			var p = new PathRes(itm);
+
+			console.log('root: <' + p.getRoot() + '>');
+			console.log('file: <' + p.getFile() + '>');
+			console.log('out: <SERVER><' + p.getOutputName(SideType.SERVER)[1] + '>');
+			console.log('out: <CLIENT><' + p.getOutputName(SideType.CLIENT)[0] + '>');
+			console.log('out: <BOTH><' + p.getOutputName(SideType.BOTH) + '>');
+			console.log('sourcemap: <' + p.getSourceMap() + '>');
+			console.log('resolve: <plop.js><' + p.resolve(p.getRoot(), 'plop.js') + '>');
+			console.log('resolve: <../plop.js><' + p.resolve(p.getRoot(),'../plop.js') + '>');
+			console.log('resolve: <plop/plop.js><' + p.resolve(p.getRoot(),'plop/plop.js') + '>');
+			console.log('resolve: <../plop/plop.js>' + p.resolve(p.getRoot(),'../plop/plop.js') + '>');
+			console.log('resolve: <><' + p.resolve(p.getRoot(),'') + '>');
+			console.log('resolve: <plap/><' + p.resolve(p.getRoot(),'plap/') + '>');			
 		});
 	}
 
 	export function run() {
-		//feed the option object with the command line;
 		doParseArguments(options);
-		//create a webkool.wk file if it doesn't exist.
 
-		var entryPoint = options.inputs.shift();
-		var rootPath = entryPoint.substr(0, entryPoint.lastIndexOf('/'));
-		if (rootPath.length > 0) {
-			rootPath += '/';
-		}
-		var webkoolFile = rootPath + 'webkool.wk';
 
-		options.includes.push(rootPath);
+		pr = new PathRes(options.output);
+		options.includes.push(pr.getRoot());
+		var entryFile = pr.resolveCheck(options.inputs.shift(), options.includes);
+		var webkoolFile = pr.resolve(pr.getCurrentFolder(), 'webkool.wk');
+
+
 		checkWebKoolWkFileExistence(webkoolFile);
 		generateSourceMapFolder(options.output);
 		//begin the parsing of webkool.wk
@@ -1261,26 +1396,32 @@ module Webkool {
 		doParseDocument(webkoolFile, function (initialBuffers:BufferManager) {
 			var _buffers = initialBuffers;
 			//parse the entry point (index.wk for example)
-			doParseDocument(entryPoint, function (buffers:BufferManager) {
+			doParseDocument(entryFile, function (buffers:BufferManager) {
 
 				_buffers.merge(SideType.BOTH, buffers, 0);
 				
 				//process some operation over buffer
 				joinBuffers(SideType.BOTH, _buffers);
 
-				var tmpFiles = [];
 				//write in file
 
-				if (options.client && !options.server)
-					tmpFiles = createFilesForSide(SideType.CLIENT, _buffers, getOutputName(SideType.CLIENT)[0]);
-				if (options.server && !options.client)
-					tmpFiles = createFilesForSide(SideType.SERVER, _buffers, getOutputName(SideType.SERVER)[1]);
-				if ((options.server && options.client) || (!options.server && !options.client))
-					tmpFiles = createFilesForSide(SideType.BOTH, _buffers, getOutputName(SideType.BOTH));
-				if (tmpFiles != null) {
-					moveTmp(tmpFiles[0].concat(tmpFiles[1]));
-					replaceTmpInFile(tmpFiles[0], tmpFiles[1]);
-				}
+				async.waterfall([
+					function(callback) {
+						var side = pr.getSide(options.client, options.server)
+						var tmpFiles = createFilesForSide(side, _buffers, pr.getOutputName(side), pr.getSourceMapName(side));
+						callback(null, tmpFiles);
+					},
+				    function(tmpFiles, callback){
+				    	if (tmpFiles != null)
+					    	moveTmp(tmpFiles[0].concat(tmpFiles[1]));
+				        callback(null, tmpFiles);
+				    },
+				    function(tmpFiles, callback){
+				    	if (tmpFiles != null)
+					    	replaceTmpInFile(tmpFiles[0], tmpFiles[1]);
+				        callback(null, tmpFiles);
+				    }
+				]);
 			});
 		});
 	}

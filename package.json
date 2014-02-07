@@ -43,6 +43,7 @@
     "jshint":             "*",
     "source-map":         "*",
     "less":               "*",
+    "async":              "*",
     "hogan.js":           "*",
     "mysql":              "*",
     "node-sass":          "*",
