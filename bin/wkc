@@ -56,6 +56,7 @@ var Webkool;
     var fs = require('fs');
     var pathm = require('path');
     var async = require('async');
+    var stream = require('stream');
 
     var outputJS, outputCSS, pr, options = {
         client: false,
@@ -1186,7 +1187,7 @@ else
 
     function moveTmp(tmpFiles) {
         tmpFiles.forEach(function (itm) {
-            var filename = itm.substr(0, itm.length - '.tmp'.length);
+            var filename = itm.substr(0, itm.length - '.tmp'.length) + '.out';
 
             var fin = fs.createReadStream(itm);
             var fout = fs.createWriteStream(filename);
@@ -1199,43 +1200,39 @@ else
 
     function replaceTmpInFile(tmpFiles, tmpFilesSourceMap) {
         tmpFiles.forEach(function (itm) {
-            var filename = itm.substr(0, itm.length - '.tmp'.length);
+            var transformDotTmp = new stream.Transform();
+            transformDotTmp._transform = function (chunk, enc, done) {
+                var data = chunk.toString();
+                data = data.toString().replace(/(\/\/# sourceMappingURL=.+)\.tmp$/, '$1');
+                this.push(data);
+                done();
+            };
+            var filename = itm.substr(0, itm.length - '.tmp'.length) + '.out';
 
-            async.waterfall([
-                function (callback) {
-                    var data = fs.readFileSync(filename);
-                    callback(null, data);
-                },
-                function (data, callback) {
-                    var res = data.toString().replace(/(\/\/# sourceMappingURL=.+)\.tmp$/, '$1');
-                    callback(null, res);
-                },
-                function (res, callback) {
-                    fs.writeFileSync(filename, res);
-                    callback(null);
-                }
-            ]);
+            var fin = fs.createReadStream(filename);
+            fin.on('end', function () {
+                fs.unlinkSync(filename);
+            });
+            var fout = fs.createWriteStream(filename.substr(0, filename.length - '.out'.length));
+            fin.pipe(transformDotTmp).pipe(fout);
         });
-        tmpFilesSourceMap.forEach(function (itm) {
-            var filename = itm.substr(0, itm.length - '.tmp'.length);
 
-            async.waterfall([
-                function (callback) {
-                    var data = fs.readFileSync(filename);
-                    callback(null, data);
-                },
-                function (data, callback) {
-                    var res = JSON.parse(data.toString());
-                    res.file = res.file.substr(0, res.file.length - '.tmp'.length);
-                    for (var i = 0; i < res.sources.length; i++)
-                        res.sources[i] = res.sources[i].substr(res.sources[i].lastIndexOf('/') + 1);
-                    callback(null, res);
-                },
-                function (res, callback) {
-                    fs.writeFileSync(filename, JSON.stringify(res));
-                    callback(null);
-                }
-            ]);
+        tmpFilesSourceMap.forEach(function (itm) {
+            var transformObj = new stream.Transform();
+            transformObj._transform = function (chunk, enc, done) {
+                var data = chunk.toString();
+                data = data.toString().replace(/(\"file\":\".*).tmp"/, '$1"');
+                this.push(data);
+                done();
+            };
+            var filename = itm.substr(0, itm.length - '.tmp'.length) + '.out';
+
+            var fin = fs.createReadStream(filename);
+            fin.on('end', function () {
+                fs.unlinkSync(filename);
+            });
+            var fout = fs.createWriteStream(filename.substr(0, filename.length - '.out'.length));
+            fin.pipe(transformObj).pipe(fout);
         });
     }
 
