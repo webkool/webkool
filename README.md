@@ -66,3 +66,17 @@ open-source platform to develop client and/or server web application.
 - 	jshint code validation
 - 	patch for stylesheet attribute, relative path, -o and --hint options
 
+**0.2.1**:
+
+-	source-map path fix
+
+**0.2.2**:
+
+-	output name fix
+
+**0.3.0**:
+
+-	<include> is now only for .wk
+-	config file is now webkool.wk
+-	options -i and -o fix
+-	debug output fix

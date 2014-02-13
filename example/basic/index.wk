@@ -6,29 +6,20 @@
 	<client>
 	</client>
 	<server>
-
+		<include href='server.wk' />
 		<handler url="/" type="text/html">
-			<on id="request">
+			<on id='request'>
 				model.plop = 2;
 			</on>
-
 			<template system="square">
 				<![CDATA[
 					#{include("/header")}#
-						<h1>BASIC PAGE #plop#</h1>
-						<h2>subtitle</h2>
-						<h3>sub-subtitle</h3>
+					<h2>hello world #plop#</h2>
 					#{include("/footer")}#
 				]]>
 			</template>
 		</handler>
 
-		<handler url="/plop.client.css" type="text/css">
-			<on id="render">
-				var css = require('fs').readFileSync('plop.client.css');
-				return (css.toString());
-			</on>
-		</handler>
 	
 	</server>
 	<template id="/header" system="square">
@@ -36,7 +27,6 @@
 			<html>
 				<head>
 					<title>Basic</title>
-					<link href="plop.client.css" rel="stylesheet" type="text/css" />
 				</head>
 				<body>
 		]]>
@@ -50,29 +40,157 @@
 
 	<stylesheet system="less">
 		<![CDATA[
-			@size: 	2px;
-			h1 {
-				background: 	#414141;
-				color: 			white;
-				border: 		@size;
-			}
-		]]>
+		#hcontainer {
+			position:absolute;
+			top:44px;
+			left:0px;
+			bottom:0px;
+			width:100vw;
+			overflow: scroll;
+			-webkit-overflow-scrolling: touch;
+		}
+		.item input[type="radio"] {
+			position: absolute;
+			height:44px;
+			line-height:44px;
+			padding: 0;
+			margin: 0;
+			right:15px;
+			-webkit-appearance: none;
+			border-radius: 0px;
+			border: none;
+		}
+		.item [type="radio"]:checked {
+			background-color: white;
+			background-image:url('images/checkbox.png');
+			background-position:center left;
+			background-repeat:no-repeat;
+		}
+		.item [type="date"] {
+			-webkit-appearance: none;
+			display: inline-block;
+			border-radius: 4px;
+			border: 1px solid #ffffff;
+			width: 85px;
+			height: 14px;
+			vertical-align:middle;
+			color: #ffffff;
+		}
+		.search #searchHashtag {
+			background-image:url('images/hashtag.png');
+			background-position:center left;
+			background-repeat:no-repeat;
+			-webkit-appearance: none;
+			border-radius: 0px;
+			border: none;
+
+			font-size:16px;
+			height:30px;
+			padding-left: 30px;
+			left:5px;
+			right:35px;
+			top:5px;
+		}
+		.search #searchHashtag.empty {
+			position:absolute;
+			color: #ffffff;
+			display:block;
+		}
+		.search #searchHashtag.used {
+			position:absolute;
+			color: #ffaaaa;
+			display:block;
+		}
+		.search #nosearch {
+			position:absolute;
+			background-image:url('images/nofilter.png');
+			background-position:center center;
+			background-repeat:no-repeat;
+			top:2px;
+			height:40px;
+			width:40px;
+			right:5px;
+			text-decoration:none;
+			display: none;
+		}
+	]]>
 	</stylesheet>
-	<stylesheet system="sass">
+	<stylesheet system="less">
 		<![CDATA[
-			$size: 	1px;
-			h2 {
-				background: 	#424242;
-				color: 			white;
-				border: 		$size;
-			}
-		]]>
+		#hcontainer {
+			position:absolute;
+			top:44px;
+			left:0px;
+			bottom:0px;
+			width:100vw;
+			overflow: scroll;
+			-webkit-overflow-scrolling: touch;
+		}
+		.item input[type="radio"] {
+			position: absolute;
+			height:44px;
+			line-height:44px;
+			padding: 0;
+			margin: 0;
+			right:15px;
+			-webkit-appearance: none;
+			border-radius: 0px;
+			border: none;
+		}
+		.item [type="radio"]:checked {
+			background-color: white;
+			background-image:url('images/checkbox.png');
+			background-position:center left;
+			background-repeat:no-repeat;
+		}
+		.item [type="date"] {
+			-webkit-appearance: none;
+			display: inline-block;
+			border-radius: 4px;
+			border: 1px solid #ffffff;
+			width: 85px;
+			height: 14px;
+			vertical-align:middle;
+			color: #ffffff;
+		}
+		.search #searchHashtag {
+			background-image:url('images/hashtag.png');
+			background-position:center left;
+			background-repeat:no-repeat;
+			-webkit-appearance: none;
+			border-radius: 0px;
+			border: none;
+
+			font-size:16px;
+			height:30px;
+			padding-left: 30px;
+			left:5px;
+			right:35px;
+			top:5px;
+		}
+		.search #searchHashtag.empty {
+			position:absolute;
+			color: #ffffff;
+			display:block;
+		}
+		.search #searchHashtag.used {
+			position:absolute;
+			color: #ffaaaa;
+			display:block;
+		}
+		.search #nosearch {
+			position:absolute;
+			background-image:url('images/nofilter.png');
+			background-position:center center;
+			background-repeat:no-repeat;
+			top:2px;
+			height:40px;
+			width:40px;
+			right:5px;
+			text-decoration:none;
+			display: none;
+		}
+	]]>
 	</stylesheet>
-	<stylesheet system="css">
-		<![CDATA[
-			h3 {
-				border: 		1px;
-			}
-		]]>
-	</stylesheet>
+
 </application>
