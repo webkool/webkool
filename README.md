@@ -72,3 +72,10 @@ open-source platform to develop client and/or server web application.
 **0.2.2**:
 
 -	output name fix
+
+**0.3.0**:
+
+-	<include> is now only for .wk
+-	config file is now webkool.wk
+-	options -i and -o fix
+-	debug output fix

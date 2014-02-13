@@ -33,7 +33,7 @@ var Webkool;
     /*
     ** Template and Css Engine
     */
-    var version = '0.2.2';
+    var version = '0.3.0';
 
     var templateEngine = {
         'square': require('../lib/square'),
