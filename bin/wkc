@@ -33,7 +33,7 @@ var Webkool;
     /*
     ** Template and Css Engine
     */
-    var version = '0.3.0';
+    var version = '0.3.1';
 
     var templateEngine = {
         'square': require('../lib/square'),
@@ -603,10 +603,13 @@ else
             var middle = this.text;
             var end = '}},\n';
 
+            var filename = pr.resolveCheck(this.location.file, options.includes);
+            filename = filename.substr(filename.lastIndexOf('/') + 1);
+
             var newLocation = {
                 line: this.location.line,
                 col: this.location.col,
-                file: pr.resolveCheck(this.location.file, options.includes)
+                file: filename
             };
 
             buffers.write(side, this.outputType, begin, null, false);
@@ -663,10 +666,13 @@ else
 else {
                 var data = this.text;
 
+                var filename = pr.resolveCheck(this.location.file, options.includes);
+                filename = filename.substr(filename.lastIndexOf('/') + 1);
+
                 var newLocation = {
                     line: this.location.line,
                     col: this.location.col,
-                    file: pr.resolveCheck(this.location.file, options.includes)
+                    file: filename
                 };
                 buffers.write(side, this.outputType, data, newLocation, true);
             }
@@ -1174,7 +1180,6 @@ else
     function addFileInSourceMapFolder(file, where) {
         try  {
             var name = file.substr(file.lastIndexOf('/') + 1);
-
             var sm = pr.getSourceMap() + name;
             var fin = fs.createReadStream(file);
             var fout = fs.createWriteStream(sm);

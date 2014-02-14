@@ -52,7 +52,7 @@ module Webkool {
 	** Template and Css Engine
 	*/
 	
-	var version = '0.3.0'; 						//current version
+	var version = '0.3.1'; 						//current version
 
 	var templateEngine = {
 		'square':	require('../lib/square'), 	//internal square templating module
@@ -677,10 +677,13 @@ module Webkool {
 			var middle 	= this.text;
 			var end 	= '}},\n';
 
+			var filename = pr.resolveCheck(this.location.file, options.includes);
+			filename = filename.substr(filename.lastIndexOf('/') + 1);
+
 			var newLocation = {
 				line: 	this.location.line,
 				col: 	this.location.col,
-				file: 	pr.resolveCheck(this.location.file, options.includes)
+				file: 	filename
 			};
 
 			buffers.write(side, this.outputType, begin, null, false);
@@ -739,10 +742,13 @@ module Webkool {
 			else {
 				var data = this.text;
 
+				var filename = pr.resolveCheck(this.location.file, options.includes);
+				filename = filename.substr(filename.lastIndexOf('/') + 1);
+
 				var newLocation = {
 					line: 	this.location.line,
 					col: 	this.location.col,
-					file: 	pr.resolveCheck(this.location.file, options.includes)
+					file: 	filename
 				};
 				buffers.write(side, this.outputType, data, newLocation, true);
 			}
@@ -1278,7 +1284,6 @@ module Webkool {
 	function 	addFileInSourceMapFolder(file, where) {
 		try {
 			var name = file.substr(file.lastIndexOf('/') + 1);
-
 			var sm = pr.getSourceMap() + name;
 			var fin = fs.createReadStream(file);
 			var fout = fs.createWriteStream(sm);
@@ -1375,7 +1380,7 @@ module Webkool {
 			console.log('resolve: <plop/plop.js><' + p.resolve(p.getRoot(),'plop/plop.js') + '>');
 			console.log('resolve: <../plop/plop.js>' + p.resolve(p.getRoot(),'../plop/plop.js') + '>');
 			console.log('resolve: <><' + p.resolve(p.getRoot(),'') + '>');
-			console.log('resolve: <plap/><' + p.resolve(p.getRoot(),'plap/') + '>');			
+			console.log('resolve: <plap/><' + p.resolve(p.getRoot(),'plap/') + '>');
 		});
 	}
 
