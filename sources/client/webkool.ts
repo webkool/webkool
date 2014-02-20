@@ -358,6 +358,7 @@ class Application {
 			}
 			if (handler) {
 				context.wait(handler, query);
+				console.log('before request');
 				handler.on_request(context, context.model, query);
 				context.synchronize();
 			}
