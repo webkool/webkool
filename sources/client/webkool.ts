@@ -215,7 +215,6 @@ class Observer {
 			target.addEventListener('change', function () { _this.set(target.getValue()) });
 		}
 		else {
-			console.log(target);
 			target.getValue = function () { return (this.text()) };
 			target.setValue = function (value) { this.text(value) };
 		}

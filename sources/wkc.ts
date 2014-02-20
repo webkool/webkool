@@ -40,7 +40,7 @@ module Webkool {
 	** Template and Css Engine
 	*/
 	
-	var version = '0.3.0'; 						//current version
+	var version = '0.3.1'; 						//current version
 
 	var templateEngine = {
 		'square':	require('../lib/square'), 	//internal square templating module
@@ -665,10 +665,13 @@ module Webkool {
 			var middle 	= this.text;
 			var end 	= '}},\n';
 
+			var filename = pr.resolveCheck(this.location.file, options.includes);
+			filename = filename.substr(filename.lastIndexOf('/') + 1);
+
 			var newLocation = {
 				line: 	this.location.line,
 				col: 	this.location.col,
-				file: 	pr.resolveCheck(this.location.file, options.includes)
+				file: 	filename
 			};
 
 			buffers.write(side, this.outputType, begin, null, false);
@@ -727,10 +730,13 @@ module Webkool {
 			else {
 				var data = this.text;
 
+				var filename = pr.resolveCheck(this.location.file, options.includes);
+				filename = filename.substr(filename.lastIndexOf('/') + 1);
+
 				var newLocation = {
 					line: 	this.location.line,
 					col: 	this.location.col,
-					file: 	pr.resolveCheck(this.location.file, options.includes)
+					file: 	filename
 				};
 				buffers.write(side, this.outputType, data, newLocation, true);
 			}
@@ -1202,7 +1208,7 @@ module Webkool {
 
 
 
-					txt += '//# sourceMappingURL=' + relPath;
+					txt += '//# sourceMappingURL=' + relPath.substr(0, relPath.length - '.tmp'.length);
 					fs.writeFile(outputSourceMapPath, sourceMapGenerated);
 					fs.writeFile(outputPath, txt);
 	
@@ -1266,7 +1272,6 @@ module Webkool {
 	function 	addFileInSourceMapFolder(file, where) {
 		try {
 			var name = file.substr(file.lastIndexOf('/') + 1);
-
 			var sm = pr.getSourceMap() + name;
 			var fin = fs.createReadStream(file);
 			var fout = fs.createWriteStream(sm);
@@ -1279,60 +1284,16 @@ module Webkool {
 	}
 
 	function  	moveTmp(tmpFiles) {
-		tmpFiles.forEach(function (itm) {
-			var filename = itm.substr(0, itm.length - '.tmp'.length) + '.out';
 
-			var fin = fs.createReadStream(itm);
-			var fout = fs.createWriteStream(filename);
-			fin.pipe(fout);
-			fin.on('end', function () {
-				fs.unlinkSync(itm);
+		tmpFiles.forEach(function (itm) {
+			fs.rename(itm, itm.substr(0, itm.length - '.tmp'.length), function (err) {
+				if (err)
+					throw Error(err);
 			});
 		});
 	}
 
-	function 	replaceTmpInFile(tmpFiles, tmpFilesSourceMap) {
-
-		tmpFiles.forEach(function (itm) {
-
-			var transformDotTmp = new stream.Transform();
-			transformDotTmp._transform = function (chunk, enc, done) {
-				var data = chunk.toString();
-				data = data.toString().replace(/(\/\/# sourceMappingURL=.+)\.tmp$/, '$1');
-				this.push(data);
-	    		done();
-			}
-			var filename = itm.substr(0, itm.length - '.tmp'.length) + '.out';
-
-			var fin = fs.createReadStream(filename);
-			fin.on('end', function () {
-				fs.unlinkSync(filename);
-			});
-			var fout = fs.createWriteStream(filename.substr(0, filename.length - '.out'.length));
-			fin.pipe(transformDotTmp).pipe(fout);
-			
-		});
-
-		tmpFilesSourceMap.forEach(function (itm) {
-			var transformObj = new stream.Transform();
-			transformObj._transform = function (chunk, enc, done) {
-				var data = chunk.toString();
-				data = data.toString().replace(/(\"file\":\".*).tmp"/, '$1"');
-				this.push(data);
-				done();
-			}
-			var filename = itm.substr(0, itm.length - '.tmp'.length) + '.out';
-
-			var fin = fs.createReadStream(filename);
-			fin.on('end', function () {
-				fs.unlinkSync(filename);
-			});
-			var fout = fs.createWriteStream(filename.substr(0, filename.length - '.out'.length));
-			fin.pipe(transformObj).pipe(fout);
-			
-		});
-
-	}
+	
 
 	function unitPath() {
 		var paths = [
@@ -1363,7 +1324,7 @@ module Webkool {
 			console.log('resolve: <plop/plop.js><' + p.resolve(p.getRoot(),'plop/plop.js') + '>');
 			console.log('resolve: <../plop/plop.js>' + p.resolve(p.getRoot(),'../plop/plop.js') + '>');
 			console.log('resolve: <><' + p.resolve(p.getRoot(),'') + '>');
-			console.log('resolve: <plap/><' + p.resolve(p.getRoot(),'plap/') + '>');			
+			console.log('resolve: <plap/><' + p.resolve(p.getRoot(),'plap/') + '>');
 		});
 	}
 
@@ -1403,12 +1364,7 @@ module Webkool {
 				    function(tmpFiles, callback){
 				    	if (tmpFiles != null)
 					    	moveTmp(tmpFiles[0].concat(tmpFiles[1]));
-				        callback(null, tmpFiles);
-				    },
-				    function(tmpFiles, callback){
-				    	if (tmpFiles != null)
-					    	replaceTmpInFile(tmpFiles[0], tmpFiles[1]);
-				        callback(null, tmpFiles);
+				        callback(null);
 				    }
 				]);
 			});

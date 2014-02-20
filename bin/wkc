@@ -1,10 +1,24 @@
 #! /usr/bin/env node
+/*
+Webkool parser
+depend:
+- node-expat
+- fs
+- ./square.js
+- problem:
+-bad path affichage d'erreur jshint:
+-.tmp.tmp
+- mauvai chemin
+- passer tout en chemin absolut
+- remplacer tout les appel manel a des path
+*/
 var __extends = this.__extends || function (d, b) {
     for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
     function __() { this.constructor = d; }
     __.prototype = b.prototype;
     d.prototype = new __();
 };
+
 function printTabs(nbr) {
     var str = '';
     for (var i = 0; i < nbr; i++)
@@ -33,7 +47,7 @@ var Webkool;
     /*
     ** Template and Css Engine
     */
-    var version = '0.3.0';
+    var version = '0.3.1';
 
     var templateEngine = {
         'square': require('../lib/square'),
@@ -82,7 +96,7 @@ var Webkool;
         errors.forEach(function (itm) {
             if (itm == null)
                 console.log('to many Errors, please fix your code');
-else {
+            else {
                 var location = smc.originalPositionFor({
                     line: itm.line,
                     column: itm.character
@@ -117,7 +131,7 @@ else {
         };
 
         PathRes.prototype.getSide = function (client, server) {
-            return ((client && server) || (!client && !server)) ? (SideType.BOTH) : ((client) ? (SideType.CLIENT) : (SideType.SERVER));
+            return ((client && server) || (!client && !server)) ? (0 /* BOTH */) : ((client) ? (2 /* CLIENT */) : (1 /* SERVER */));
         };
 
         PathRes.prototype.getFile = function () {
@@ -129,11 +143,11 @@ else {
             var client = null;
             var server = null;
 
-            if (side == SideType.CLIENT)
+            if (side == 2 /* CLIENT */)
                 client = filename + ((filename[filename.length - 1] == '/') ? ('client') : (''));
-            if (side == SideType.SERVER)
+            if (side == 1 /* SERVER */)
                 server = filename + ((filename[filename.length - 1] == '/') ? ('server') : (''));
-            if (side == SideType.BOTH) {
+            if (side == 0 /* BOTH */) {
                 client = filename + ((filename[filename.length - 1] == '/') ? ('') : ('.')) + 'client';
                 server = filename + ((filename[filename.length - 1] == '/') ? ('') : ('.')) + 'server';
             }
@@ -152,11 +166,11 @@ else {
             var client = null;
             var server = null;
 
-            if (side == SideType.CLIENT)
+            if (side == 2 /* CLIENT */)
                 client = filename + ((filename[filename.length - 1] == '/') ? ('client') : (''));
-            if (side == SideType.SERVER)
+            if (side == 1 /* SERVER */)
                 server = filename + ((filename[filename.length - 1] == '/') ? ('server') : (''));
-            if (side == SideType.BOTH) {
+            if (side == 0 /* BOTH */) {
                 client = filename + ((filename[filename.length - 1] == '/') ? ('') : ('.')) + 'client';
                 server = filename + ((filename[filename.length - 1] == '/') ? ('') : ('.')) + 'server';
             }
@@ -168,11 +182,11 @@ else {
             var client = null;
             var server = null;
 
-            if (side == SideType.CLIENT)
+            if (side == 2 /* CLIENT */)
                 client = filename + ((filename[filename.length - 1] == '/') ? ('client') : (''));
-            if (side == SideType.SERVER)
+            if (side == 1 /* SERVER */)
                 server = filename + ((filename[filename.length - 1] == '/') ? ('server') : (''));
-            if (side == SideType.BOTH) {
+            if (side == 0 /* BOTH */) {
                 client = filename + ((filename[filename.length - 1] == '/') ? ('') : ('.')) + 'client';
                 server = filename + ((filename[filename.length - 1] == '/') ? ('') : ('.')) + 'server';
             }
@@ -183,7 +197,7 @@ else {
             var res = pathm.resolve(that + path);
             if (path.length === 0)
                 return (this.root);
-else if (path[path.length - 1] == '/')
+            else if (path[path.length - 1] == '/')
                 return (res + '/');
             return (res);
         };
@@ -246,13 +260,14 @@ else if (path[path.length - 1] == '/')
         };
 
         BufferManager.prototype.write = function (side, name, data, info, split) {
-            if (side == SideType.BOTH) {
-                this.write(SideType.SERVER, name, data, info, split);
-                this.write(SideType.CLIENT, name, data, info, split);
+            if (side == 0 /* BOTH */) {
+                this.write(1 /* SERVER */, name, data, info, split);
+                this.write(2 /* CLIENT */, name, data, info, split);
             } else {
                 // if info == null, the chunk will be not add to the source map
                 var buff = this.get(side, name, true);
 
+                //split chunk line by line and insert them with there real line number (source map tricks)
                 if (split == true) {
                     data.split('\n').forEach(function (itm, idx, col) {
                         var infoTmp = {
@@ -261,6 +276,7 @@ else if (path[path.length - 1] == '/')
                             file: info.file
                         };
 
+                        //filter used because expat already return 2 blank lines
                         if ((idx == 0 || idx == col.length - 1) && epurString(itm) == '')
                             infoTmp = null;
 
@@ -299,14 +315,14 @@ else if (path[path.length - 1] == '/')
         };
 
         BufferManager.prototype.merge = function (side, other, info) {
-            if (side == SideType.BOTH) {
-                this.merge(SideType.SERVER, other, info.line);
-                this.merge(SideType.CLIENT, other, info.line);
+            if (side == 0 /* BOTH */) {
+                this.merge(1 /* SERVER */, other, info.line);
+                this.merge(2 /* CLIENT */, other, info.line);
             } else {
                 var buff = other.getBuffers();
 
                 for (var i = 0; i < buff.length; i++) {
-                    if (buff[i].side == side || buff[i].side == SideType.BOTH) {
+                    if (buff[i].side == side || buff[i].side == 0 /* BOTH */) {
                         this.insert(side, buff[i].name, buff[i].data, info);
                     }
                 }
@@ -318,7 +334,7 @@ else if (path[path.length - 1] == '/')
                 var itm = elm[i];
                 if (itm.data instanceof Array)
                     line = this.profoundToSourceMap(map, line, itm.data);
-else {
+                else {
                     if (itm.info != null) {
                         map.addMapping({
                             'generated': {
@@ -391,7 +407,7 @@ else {
             data.forEach(function (elm) {
                 if (elm.data instanceof Array)
                     output += _this.profoundToString(elm.data);
-else
+                else
                     output += elm.data;
             });
             return (output);
@@ -406,7 +422,7 @@ else
                 buff.data.forEach(function (elm) {
                     if (elm.data instanceof Array)
                         output += _this.profoundToString(elm.data);
-else
+                    else
                         output += elm.data;
                 });
             }
@@ -442,8 +458,8 @@ else
                     res += '/* include ' + filename + ' */\n';
                 res += fs.readFileSync(filename, 'utf-8');
                 if (putInBuffer == true)
-                    element.preparedBuffers.write(SideType.BOTH, extension, res, null, false);
-else
+                    element.preparedBuffers.write(0 /* BOTH */, extension, res, null, false);
+                else
                     content = res;
                 parser.dequeue(element);
                 return (true);
@@ -603,10 +619,13 @@ else
             var middle = this.text;
             var end = '}},\n';
 
+            var filename = pr.resolveCheck(this.location.file, options.includes);
+            filename = filename.substr(filename.lastIndexOf('/') + 1);
+
             var newLocation = {
                 line: this.location.line,
                 col: this.location.col,
-                file: pr.resolveCheck(this.location.file, options.includes)
+                file: filename
             };
 
             buffers.write(side, this.outputType, begin, null, false);
@@ -660,13 +679,16 @@ else
         Script.prototype.printBody = function (buffers, side) {
             if (this.attrs.hasOwnProperty('href'))
                 buffers.merge(side, this.preparedBuffers, this.location.line);
-else {
+            else {
                 var data = this.text;
+
+                var filename = pr.resolveCheck(this.location.file, options.includes);
+                filename = filename.substr(filename.lastIndexOf('/') + 1);
 
                 var newLocation = {
                     line: this.location.line,
                     col: this.location.col,
-                    file: pr.resolveCheck(this.location.file, options.includes)
+                    file: filename
                 };
                 buffers.write(side, this.outputType, data, newLocation, true);
             }
@@ -695,7 +717,7 @@ else {
         Stylesheet.prototype.printBody = function (buffers, side) {
             if (this.attrs.hasOwnProperty('href'))
                 buffers.merge(side, this.preparedBuffers, this.location.line);
-else {
+            else {
                 var data = '';
 
                 data += this.text;
@@ -751,15 +773,15 @@ else {
 
             if (this.attrs.hasOwnProperty('href'))
                 cleaned = this.templateContent.replace(/\s+/g, ' ');
-else
+            else
                 cleaned = this.text.replace(/\s+/g, ' ');
-            cleaned = cleaned.replace(/\"/g, '\\\"');
+            cleaned = cleaned.replace(/\"/g, '\\\"'); //keep \ in file;
 
             var bufferString = new Buffer(cleaned);
             var streamBuff = new sbuff.WritableStreamBuffer();
 
             var templateCompiler = new templateEngine[this.templateName].parse(bufferString);
-            templateCompiler.print(streamBuff, '');
+            templateCompiler.print(streamBuff, ''); // compile and put the result in bufferTmp
 
             data += streamBuff.getContentsAsString("utf8");
             data += '},\n';
@@ -796,7 +818,7 @@ else
         }
         Client.prototype.print = function (buffers, side) {
             if (options.client || (!options.client && !options.server))
-                Element.prototype.print.call(this, buffers, SideType.CLIENT);
+                Element.prototype.print.call(this, buffers, 2 /* CLIENT */);
         };
         return Client;
     })(Element);
@@ -878,7 +900,7 @@ else
         }
         Server.prototype.print = function (buffers, side) {
             if (options.server || (!options.client && !options.server))
-                Element.prototype.print.call(this, buffers, SideType.SERVER);
+                Element.prototype.print.call(this, buffers, 1 /* SERVER */);
         };
         return Server;
     })(Element);
@@ -930,13 +952,13 @@ else
                 argv.i.forEach(function (elm) {
                     options.includes.push(elm);
                 });
-else
+            else
                 options.includes.push(argv.i);
         }
         if (argv.hint) {
             if (argv.hint instanceof Array)
                 options.jshint = loadJsHintFile(argv.hint[0]);
-else
+            else
                 options.jshint = loadJsHintFile(argv.hint);
         } else
             options.jshint = loadJsHintFile(null);
@@ -1009,7 +1031,7 @@ else
             this.elements.splice(index, 1);
             if (this.elements.length == 0) {
                 var buffers = new BufferManager();
-                this.currentElement.print(buffers, SideType.BOTH);
+                this.currentElement.print(buffers, 0 /* BOTH */);
 
                 if (callback)
                     callback(buffers);
@@ -1065,15 +1087,15 @@ else
         if (options.output[options.output.length - 1] == '/')
             filename += '/';
 
-        if (side == SideType.CLIENT) {
+        if (side == 2 /* CLIENT */) {
             var client = filename + ((filename[filename.length - 1] == '/') ? ('client') : (''));
             return ([client, null]);
         }
-        if (side == SideType.SERVER) {
+        if (side == 1 /* SERVER */) {
             var server = filename + ((filename[filename.length - 1] == '/') ? ('server') : (''));
             return ([null, server]);
         }
-        if (side == SideType.BOTH) {
+        if (side == 0 /* BOTH */) {
             var client = filename + ((filename[filename.length - 1] == '/') ? ('') : ('.')) + 'client';
             var server = filename + ((filename[filename.length - 1] == '/') ? ('') : ('.')) + 'server';
             return ([client, server]);
@@ -1083,18 +1105,18 @@ else
     }
 
     function createFilesForSide(side, buffers, filename, smfilename) {
-        if (side == SideType.BOTH) {
-            var rs = createFilesForSide(SideType.SERVER, buffers, filename[1], smfilename[1]);
-            var rc = createFilesForSide(SideType.CLIENT, buffers, filename[0], smfilename[0]);
+        if (side == 0 /* BOTH */) {
+            var rs = createFilesForSide(1 /* SERVER */, buffers, filename[1], smfilename[1]);
+            var rc = createFilesForSide(2 /* CLIENT */, buffers, filename[0], smfilename[0]);
             if (rc && rs) {
                 return ([rs[0].concat(rc[0]), rs[1].concat(rc[1])]);
             }
             return (null);
         } else {
             if (Array.isArray(filename))
-                filename = (side == SideType.CLIENT) ? (filename[0]) : (filename[1]);
+                filename = (side == 2 /* CLIENT */) ? (filename[0]) : (filename[1]);
             if (Array.isArray(smfilename))
-                smfilename = (side == SideType.CLIENT) ? (smfilename[0]) : (smfilename[1]);
+                smfilename = (side == 2 /* CLIENT */) ? (smfilename[0]) : (smfilename[1]);
             var errorInFile = false;
             var tmpFiles = [];
             var tmpFilesSourceMap = [];
@@ -1115,7 +1137,7 @@ else
                     var outputPath = filename + ext;
                     var outputSourceMapPath = smfilename + extsm;
 
-                    txt += '//# sourceMappingURL=' + relPath;
+                    txt += '//# sourceMappingURL=' + relPath.substr(0, relPath.length - '.tmp'.length);
                     fs.writeFile(outputSourceMapPath, sourceMapGenerated);
                     fs.writeFile(outputPath, txt);
 
@@ -1125,7 +1147,7 @@ else
                     if (buff[i].name == '.js') {
                         if (hint(txt, JSON.parse(sourceMapGenerated), filename))
                             tmpFiles.push(outputPath);
-else
+                        else
                             errorInFile = true;
                     } else
                         tmpFiles.push(outputPath);
@@ -1139,9 +1161,9 @@ else
     }
 
     function joinBuffers(side, buffers) {
-        if (side == SideType.BOTH) {
-            joinBuffers(SideType.SERVER, buffers);
-            joinBuffers(SideType.CLIENT, buffers);
+        if (side == 0 /* BOTH */) {
+            joinBuffers(1 /* SERVER */, buffers);
+            joinBuffers(2 /* CLIENT */, buffers);
         } else {
             for (var eng in styleSheetEngine) {
                 if (eng != 'css') {
@@ -1151,14 +1173,15 @@ else
                         styleSheetEngine[eng].compile(inp, streamBuff);
                         var line = buffers.get(side, '.css', true).data.length;
                         var data = streamBuff.getContentsAsString("utf8");
-                        buffers.write(side, '.css', data, null, false);
+                        buffers.write(side, '.css', data, null, false); //tmp infos
                     }
                 }
             }
 
-            if (side == SideType.SERVER) {
-                var line = buffers.get(SideType.SERVER, '.js', true).data.length;
-                buffers.write(SideType.SERVER, '.js', '\napplication.start();\n', null, false);
+            //append application start at the end of .js
+            if (side == 1 /* SERVER */) {
+                var line = buffers.get(1 /* SERVER */, '.js', true).data.length;
+                buffers.write(1 /* SERVER */, '.js', '\napplication.start();\n', null, false); //tmp infos
             }
         }
     }
@@ -1174,7 +1197,6 @@ else
     function addFileInSourceMapFolder(file, where) {
         try  {
             var name = file.substr(file.lastIndexOf('/') + 1);
-
             var sm = pr.getSourceMap() + name;
             var fin = fs.createReadStream(file);
             var fout = fs.createWriteStream(sm);
@@ -1187,52 +1209,10 @@ else
 
     function moveTmp(tmpFiles) {
         tmpFiles.forEach(function (itm) {
-            var filename = itm.substr(0, itm.length - '.tmp'.length) + '.out';
-
-            var fin = fs.createReadStream(itm);
-            var fout = fs.createWriteStream(filename);
-            fin.pipe(fout);
-            fin.on('end', function () {
-                fs.unlinkSync(itm);
+            fs.rename(itm, itm.substr(0, itm.length - '.tmp'.length), function (err) {
+                if (err)
+                    throw Error(err);
             });
-        });
-    }
-
-    function replaceTmpInFile(tmpFiles, tmpFilesSourceMap) {
-        tmpFiles.forEach(function (itm) {
-            var transformDotTmp = new stream.Transform();
-            transformDotTmp._transform = function (chunk, enc, done) {
-                var data = chunk.toString();
-                data = data.toString().replace(/(\/\/# sourceMappingURL=.+)\.tmp$/, '$1');
-                this.push(data);
-                done();
-            };
-            var filename = itm.substr(0, itm.length - '.tmp'.length) + '.out';
-
-            var fin = fs.createReadStream(filename);
-            fin.on('end', function () {
-                fs.unlinkSync(filename);
-            });
-            var fout = fs.createWriteStream(filename.substr(0, filename.length - '.out'.length));
-            fin.pipe(transformDotTmp).pipe(fout);
-        });
-
-        tmpFilesSourceMap.forEach(function (itm) {
-            var transformObj = new stream.Transform();
-            transformObj._transform = function (chunk, enc, done) {
-                var data = chunk.toString();
-                data = data.toString().replace(/(\"file\":\".*).tmp"/, '$1"');
-                this.push(data);
-                done();
-            };
-            var filename = itm.substr(0, itm.length - '.tmp'.length) + '.out';
-
-            var fin = fs.createReadStream(filename);
-            fin.on('end', function () {
-                fs.unlinkSync(filename);
-            });
-            var fout = fs.createWriteStream(filename.substr(0, filename.length - '.out'.length));
-            fin.pipe(transformObj).pipe(fout);
         });
     }
 
@@ -1256,9 +1236,9 @@ else
 
             console.log('root: <' + p.getRoot() + '>');
             console.log('file: <' + p.getFile() + '>');
-            console.log('out: <SERVER><' + p.getOutputName(SideType.SERVER)[1] + '>');
-            console.log('out: <CLIENT><' + p.getOutputName(SideType.CLIENT)[0] + '>');
-            console.log('out: <BOTH><' + p.getOutputName(SideType.BOTH) + '>');
+            console.log('out: <SERVER><' + p.getOutputName(1 /* SERVER */)[1] + '>');
+            console.log('out: <CLIENT><' + p.getOutputName(2 /* CLIENT */)[0] + '>');
+            console.log('out: <BOTH><' + p.getOutputName(0 /* BOTH */) + '>');
             console.log('sourcemap: <' + p.getSourceMap() + '>');
             console.log('resolve: <plop.js><' + p.resolve(p.getRoot(), 'plop.js') + '>');
             console.log('resolve: <../plop.js><' + p.resolve(p.getRoot(), '../plop.js') + '>');
@@ -1286,10 +1266,10 @@ else
 
             //parse the entry point (index.wk for example)
             doParseDocument(entryFile, function (buffers) {
-                _buffers.merge(SideType.BOTH, buffers, 0);
+                _buffers.merge(0 /* BOTH */, buffers, 0);
 
                 //process some operation over buffer
-                joinBuffers(SideType.BOTH, _buffers);
+                joinBuffers(0 /* BOTH */, _buffers);
 
                 //write in file
                 async.waterfall([
@@ -1301,12 +1281,7 @@ else
                     function (tmpFiles, callback) {
                         if (tmpFiles != null)
                             moveTmp(tmpFiles[0].concat(tmpFiles[1]));
-                        callback(null, tmpFiles);
-                    },
-                    function (tmpFiles, callback) {
-                        if (tmpFiles != null)
-                            replaceTmpInFile(tmpFiles[0], tmpFiles[1]);
-                        callback(null, tmpFiles);
+                        callback(null);
                     }
                 ]);
             });

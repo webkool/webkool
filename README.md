@@ -80,3 +80,7 @@ open-source platform to develop client and/or server web application.
 -	config file is now webkool.wk
 -	options -i and -o fix
 -	debug output fix
+
+**0.3.1**:
+
+-	fix relative path in source-map file

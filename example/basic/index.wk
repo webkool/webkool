@@ -4,29 +4,36 @@
 	<property id="name">test</property>
 	<property id="port">4242</property>
 	<client>
+		<handler url='/home' type='text.html'>
+			<template system='square'>
+				<![CDATA[
+					<h1>HOME</h1>
+				]]>
+			</template>
+			
+		</handler>
 	</client>
 	<server>
-		<include href='server.wk' />
-		<handler url="/" type="text/html">
+		<handler url='/' type='text.html'>
 			<on id='request'>
-				model.plop = 2;
+				model.title = 'bonjour';
 			</on>
-			<template system="square">
+			<template system='square'>
 				<![CDATA[
 					#{include("/header")}#
-					<h2>hello world #plop#</h2>
+					<h1>plop</h1>
 					#{include("/footer")}#
 				]]>
 			</template>
+			
 		</handler>
-
 	
 	</server>
-	<template id="/header" system="square">
+	<template id='/header' system="square">
 		<![CDATA[
 			<html>
 				<head>
-					<title>Basic</title>
+					<title>#title#</title>
 				</head>
 				<body>
 		]]>
@@ -37,160 +44,5 @@
 			</html>
 		]]>
 	</template>
-
-	<stylesheet system="less">
-		<![CDATA[
-		#hcontainer {
-			position:absolute;
-			top:44px;
-			left:0px;
-			bottom:0px;
-			width:100vw;
-			overflow: scroll;
-			-webkit-overflow-scrolling: touch;
-		}
-		.item input[type="radio"] {
-			position: absolute;
-			height:44px;
-			line-height:44px;
-			padding: 0;
-			margin: 0;
-			right:15px;
-			-webkit-appearance: none;
-			border-radius: 0px;
-			border: none;
-		}
-		.item [type="radio"]:checked {
-			background-color: white;
-			background-image:url('images/checkbox.png');
-			background-position:center left;
-			background-repeat:no-repeat;
-		}
-		.item [type="date"] {
-			-webkit-appearance: none;
-			display: inline-block;
-			border-radius: 4px;
-			border: 1px solid #ffffff;
-			width: 85px;
-			height: 14px;
-			vertical-align:middle;
-			color: #ffffff;
-		}
-		.search #searchHashtag {
-			background-image:url('images/hashtag.png');
-			background-position:center left;
-			background-repeat:no-repeat;
-			-webkit-appearance: none;
-			border-radius: 0px;
-			border: none;
-
-			font-size:16px;
-			height:30px;
-			padding-left: 30px;
-			left:5px;
-			right:35px;
-			top:5px;
-		}
-		.search #searchHashtag.empty {
-			position:absolute;
-			color: #ffffff;
-			display:block;
-		}
-		.search #searchHashtag.used {
-			position:absolute;
-			color: #ffaaaa;
-			display:block;
-		}
-		.search #nosearch {
-			position:absolute;
-			background-image:url('images/nofilter.png');
-			background-position:center center;
-			background-repeat:no-repeat;
-			top:2px;
-			height:40px;
-			width:40px;
-			right:5px;
-			text-decoration:none;
-			display: none;
-		}
-	]]>
-	</stylesheet>
-	<stylesheet system="less">
-		<![CDATA[
-		#hcontainer {
-			position:absolute;
-			top:44px;
-			left:0px;
-			bottom:0px;
-			width:100vw;
-			overflow: scroll;
-			-webkit-overflow-scrolling: touch;
-		}
-		.item input[type="radio"] {
-			position: absolute;
-			height:44px;
-			line-height:44px;
-			padding: 0;
-			margin: 0;
-			right:15px;
-			-webkit-appearance: none;
-			border-radius: 0px;
-			border: none;
-		}
-		.item [type="radio"]:checked {
-			background-color: white;
-			background-image:url('images/checkbox.png');
-			background-position:center left;
-			background-repeat:no-repeat;
-		}
-		.item [type="date"] {
-			-webkit-appearance: none;
-			display: inline-block;
-			border-radius: 4px;
-			border: 1px solid #ffffff;
-			width: 85px;
-			height: 14px;
-			vertical-align:middle;
-			color: #ffffff;
-		}
-		.search #searchHashtag {
-			background-image:url('images/hashtag.png');
-			background-position:center left;
-			background-repeat:no-repeat;
-			-webkit-appearance: none;
-			border-radius: 0px;
-			border: none;
-
-			font-size:16px;
-			height:30px;
-			padding-left: 30px;
-			left:5px;
-			right:35px;
-			top:5px;
-		}
-		.search #searchHashtag.empty {
-			position:absolute;
-			color: #ffffff;
-			display:block;
-		}
-		.search #searchHashtag.used {
-			position:absolute;
-			color: #ffaaaa;
-			display:block;
-		}
-		.search #nosearch {
-			position:absolute;
-			background-image:url('images/nofilter.png');
-			background-position:center center;
-			background-repeat:no-repeat;
-			top:2px;
-			height:40px;
-			width:40px;
-			right:5px;
-			text-decoration:none;
-			display: none;
-		}
-	]]>
-	</stylesheet>
 
 </application>
