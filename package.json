@@ -10,7 +10,7 @@
     "api"
   ],
 
-  "version": "0.3.1",
+  "version": "0.3.2",
   "preferGlobal": true,
 
   "license":  "Apache License 2.0",
