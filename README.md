@@ -84,3 +84,9 @@ open-source platform to develop client and/or server web application.
 **0.3.1**:
 
 -	fix relative path in source-map file
+
+**0.3.2**:
+
+-	fix file saving step
+
+
