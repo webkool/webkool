@@ -128,6 +128,7 @@ class Context {
 class Handler {
 	url;
 	contentType = 'text/html';
+	compiled_route;
 
 	on_checkAccess(context, model, query) {
 		return true;
@@ -142,7 +143,7 @@ class Handler {
 	}
 
 	on_filter(context, model, query) {
-		return this.url == context.url;
+		return false;//this.url == context.url;
 	}
 
 	on_load(context, model, query) {
@@ -255,19 +256,30 @@ class Template {
 }
 
 class Application {
-  handlers;
+  static_handlers;
+  dynamic_handlers;
   model;
   properties;
   templates;
 
 	constructor() {
-		this.handlers = {};
+		this.static_handlers = {};
+		this.dynamic_handlers = {};
 		this.properties = {};
 		this.templates = {};
 	}
 
-	addHandler(name, handler) {
-		this.handlers[name] = handler;
+	addHandler(url, handler) {
+		var isDynamic = /:[a-zA-Z-_]+/g;
+
+		console.log('addHandler for url', url);
+		if (isDynamic.test(url)) {
+			console.log('is dynamic');
+			handler.compiled_route = this.compileRoute(url);
+			this.dynamic_handlers[url] = handler;
+		}
+		else 
+			this.static_handlers[url] = handler;
 	}
 
 	addObserver(name, selector) {
@@ -300,6 +312,39 @@ class Application {
 		throw (error);
 	}
 
+	compileRoute(route) {
+		var attrs 		= [];
+		var reg_replace = /:([a-zA-Z-_]+)/gi;
+
+		var compiled_route = route.replace(reg_replace, function (match, select) {
+			attrs.push(select);
+			return ('([a-zA-Z0-9-_]+)');
+		});
+		compiled_route = compiled_route.replace(/\//gi, '\\/');
+		var regexp = new RegExp(compiled_route, 'i');
+		return ({ 
+			regexp: regexp,
+			fields:	attrs
+		});
+	}
+
+	matchWithDynamicHandler(url, query) {
+		var extract;
+		var params = {};
+		var handlers = this.dynamic_handlers;
+		var route;
+
+		for (route in handlers) {
+			extract = handlers[route].compiled_route.regexp.exec(url);
+			if (extract) {
+				for (var i = 1; i < extract.length; i++)
+					query[handlers[route].compiled_route.fields[i - 1]] = extract[i];
+				return (handlers[route]);
+			}
+		}
+		return (null);
+	}
+
 	parseQuery(url) {
 		var query = {}, param, params, i, l;
 		if (url) {
@@ -319,19 +364,24 @@ class Application {
 		this.requestWithContext(context, url, query, false);
 	}
 
-
 	requestWithContext(context, url, query, external) {
-		var handler, handlers, offset, clone = {};
+		var static_handlers, dynamic_handlers, concat_handler = {};
+		var attrname;
+		var route;
+		var tmp;
+		var handler;
+		var offset;
+		var clone = {};
+
 		try {
-		
-			//copy des attrs (pour eviter les modification par references);
+			//copy query
 			if (query) {
 				for (var attr in query) {
 					clone[attr] = query[attr];
 				}
 				query = clone;
 			}
-
+			//add in query
 			offset = url.indexOf('?');
 			if (offset > 0) {
 				context.url = url.substring(0, offset);
@@ -341,20 +391,25 @@ class Application {
 				context.url = url;
 				query = query || {};
 			}
-
-			handlers = this.handlers;
-			if (handlers.hasOwnProperty(context.url) && (!external || (external && handlers[context.url].contentType))) {
-				handler = handlers[context.url];
+			//select handler 
+			static_handlers = this.static_handlers;
+			dynamic_handlers = this.dynamic_handlers;
+			if (static_handlers.hasOwnProperty(context.url) && (!external || (external && static_handlers[context.url].contentType))) {
+				handler = static_handlers[context.url];
+			}
+			else if (tmp = this.matchWithDynamicHandler(context.url, query)) {
+				handler = tmp;
 			}
 			else {
-				for (handler in handlers) {
-					handler = handlers[handler];
+				for (route in static_handlers) {
+					handler = static_handlers[route];
 					if ((!external || (external && handler.contentType)) && handler.on_filter(context, context.model, query)) {
 						break;
 					}
 					handler = null;
-				}
+				}				
 			}
+			//sync
 			if (handler) {
 				context.wait(handler, query);
 				handler.on_request(context, context.model, query);
@@ -364,15 +419,16 @@ class Application {
 				this.handlerNotFound(context, url);
 			}
 		}
-		catch (e) {
-			if (handler) {
-				handler.on_error(context, context.model, query, e);
-			}
-			else {
-				this.internalError(context, e);
-			}
+		catch (err) {
+			if (handler)
+				handler.on_error(context, context.model, query, err);
+			else
+				this.internalError(context, err);
 		}
 	}
+
+
+	
 
 	render(url) {
 		var model = this.getModel();

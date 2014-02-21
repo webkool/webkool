@@ -11,7 +11,15 @@
 			- mauvai chemin
 		- passer tout en chemin absolut
 		- remplacer tout les appel manel a des path
+	TODO:
+		- error file not found error mal gere
+		- quand il y a un warning j'arrete la compil ! pas bien
+		- hogan to mustache
 
+		- idees d'ajout:
+			- les requete GET POST DELETE PUT
+			- patern matching sur route genre /plop/:name and get the name inside the model.
+			- pouvoir preciser un code de retour
 */
 
 
@@ -52,7 +60,7 @@ module Webkool {
 	** Template and Css Engine
 	*/
 	
-	var version = '0.3.2'; 						//current version
+	var version = '0.3.3'; 						//current version
 
 	var templateEngine = {
 		'square':	require('../lib/square'), 	//internal square templating module

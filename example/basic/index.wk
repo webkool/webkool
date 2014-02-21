@@ -3,18 +3,9 @@
 
 	<property id="name">test</property>
 	<property id="port">4242</property>
-	<client>
-		<handler url='/home' type='text.html'>
-			<template system='square'>
-				<![CDATA[
-					<h1>HOME</h1>
-				]]>
-			</template>
-			
-		</handler>
-	</client>
+
 	<server>
-		<handler url='/' type='text.html'>
+		<handler url='/user/:name' type='text/html'>
 			<on id='request'>
 				model.title = 'bonjour';
 			</on>

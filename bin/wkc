@@ -11,6 +11,14 @@ depend:
 - mauvai chemin
 - passer tout en chemin absolut
 - remplacer tout les appel manel a des path
+TODO:
+- error file not found error mal gere
+- quand il y a un warning j'arrete la compil ! pas bien
+- hogan to mustache
+- idees d'ajout:
+- les requete GET POST DELETE PUT
+- patern matching sur route genre /plop/:name and get the name inside the model.
+- pouvoir preciser un code de retour
 */
 var __extends = this.__extends || function (d, b) {
     for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
