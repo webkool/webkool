@@ -263,18 +263,16 @@ class Application {
   templates;
 
 	constructor() {
-		this.static_handlers = {};
-		this.dynamic_handlers = {};
-		this.properties = {};
-		this.templates = {};
+		this.static_handlers 	= {};
+		this.dynamic_handlers	= {};
+		this.properties 		= {};
+		this.templates 			= {};
 	}
 
 	addHandler(url, handler) {
-		var isDynamic = /:[a-zA-Z-_]+/g;
+		var isDynamic = /:([^\/]+)/g;
 
-		console.log('addHandler for url', url);
 		if (isDynamic.test(url)) {
-			console.log('is dynamic');
 			handler.compiled_route = this.compileRoute(url);
 			this.dynamic_handlers[url] = handler;
 		}
@@ -314,13 +312,14 @@ class Application {
 
 	compileRoute(route) {
 		var attrs 		= [];
-		var reg_replace = /:([a-zA-Z-_]+)/gi;
+		var reg_replace = /:([^\/]+)/gi;
 
 		var compiled_route = route.replace(reg_replace, function (match, select) {
 			attrs.push(select);
-			return ('([a-zA-Z0-9-_]+)');
+			return ('([^\/]+)');
 		});
-		compiled_route = compiled_route.replace(/\//gi, '\\/');
+		compiled_route = '^' + compiled_route.replace(/\//gi, '\\/') + '$';
+		console.log(compiled_route);
 		var regexp = new RegExp(compiled_route, 'i');
 		return ({ 
 			regexp: regexp,
@@ -337,8 +336,11 @@ class Application {
 		for (route in handlers) {
 			extract = handlers[route].compiled_route.regexp.exec(url);
 			if (extract) {
-				for (var i = 1; i < extract.length; i++)
+				console.log('find');
+				for (var i = 1; i < extract.length; i++) {
 					query[handlers[route].compiled_route.fields[i - 1]] = extract[i];
+					console.log('add', extract[i]);
+				}
 				return (handlers[route]);
 			}
 		}
@@ -382,6 +384,7 @@ class Application {
 				query = clone;
 			}
 			//add in query
+			url = decodeURIComponent(url);
 			offset = url.indexOf('?');
 			if (offset > 0) {
 				context.url = url.substring(0, offset);

@@ -5,8 +5,9 @@
 	<property id="port">4242</property>
 
 	<server>
-		<handler url='/user/:name' type='text/html'>
+		<handler url='/user/:name/' type='text/html'>
 			<on id='request'>
+				console.log(query);
 				model.title = 'bonjour';
 			</on>
 			<template system='square'>
