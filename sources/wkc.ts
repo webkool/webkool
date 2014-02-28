@@ -1,25 +1,5 @@
 /*
 	Webkool parser
-	depend:
-		- node-expat
-		- fs
-		- ./square.js
-
-	- problem:
-		-bad path affichage d'erreur jshint:
-			-.tmp.tmp
-			- mauvai chemin
-		- passer tout en chemin absolut
-		- remplacer tout les appel manel a des path
-	TODO:
-		- error file not found error mal gere
-		- quand il y a un warning j'arrete la compil ! pas bien
-		- hogan to mustache
-
-		- idees d'ajout:
-			- les requete GET POST DELETE PUT
-			- patern matching sur route genre /plop/:name and get the name inside the model.
-			- pouvoir preciser un code de retour
 */
 
 
@@ -59,8 +39,10 @@ module Webkool {
 	/*
 	** Template and Css Engine
 	*/
-	
-	var version = '0.3.3'; 						//current version
+
+	var version = '0.4.0'; 						//current version
+
+	var webkool = require('../lib/client/webkool.js');
 
 	var templateEngine = {
 		'square':	require('../lib/square'), 	//internal square templating module
@@ -86,6 +68,9 @@ module Webkool {
 	var async	= require('async');
 	var stream 	= require('stream');
 
+	var simApp 	= new webkool.Application();
+	var logger;
+
 	var outputJS,
 		outputCSS,
 		pr,
@@ -109,9 +94,14 @@ module Webkool {
 	function printHintErrors(errors, sourceMap, output) {
 		var smc = new sm.SourceMapConsumer(sourceMap);
 
+		var feedback = {
+			error: 		0,
+			warning:	0
+		};
+
 		errors.forEach(function (itm) {
 			if (itm == null)
-				console.log('to many Errors, please fix your code');
+				logger.error('to many Errors, please fix your code');
 			else {
 				var location = smc.originalPositionFor({
 		  			line: 	itm.line,
@@ -122,15 +112,59 @@ module Webkool {
 
 				if (location.line != null) {
 					var path = pathm.resolve(fullPath, pathm.relative(fullPath, location.source));					
-					console.log(itm.id, itm.code, itm.reason, 'in file', path + ':' + location.line + ':' + location.column);
+					if (itm.code[0] === 'W') {
+						logger.warning(path, location.line, location.column, itm.code + ' ' + itm.reason);feedback.warning++;
+					}
+					else {
+						logger.error(path, location.line, location.column, itm.code + ' ' + itm.reason);feedback.error++;
+					}
 				}
 				else {
 					var path = pathm.resolve(fullPath, pathm.relative(fullPath, sourceMap.file));
-					console.log(itm.id, itm.code, itm.reason, 'in file', path + ':' + itm.line + ':' + itm.character);
+
+					if (itm.code[0] === 'W') {
+						logger.warning(path, itm.line, itm.character, itm.code + ' ' + itm.reason);feedback.warning++;
+					}
+					else {
+						logger.error(path, itm.line, itm.character, itm.code + ' ' + itm.reason);feedback.error++;
+					}
 				}
 			}
 		});
+		return (feedback.error === 0);
+	}
 
+	/*
+	**	Logger
+	*/
+
+	class	Logger {
+		stream;
+
+		constructor(outputStream) {
+			this.stream = outputStream;
+		}
+
+		error(file, line, column, message) {
+			var msg;
+
+			if (typeof line === 'undefined' && typeof column === 'undefined' && typeof message === 'undefined')
+				msg = 'error: ' + file + '\n';
+			else {
+				msg = '(' + file + ':' + line + ':' + column + '):\terror: ' + message + '\n';
+			}
+			this.stream.write(msg);
+		}
+
+		warning(file, line, column, message) {
+			var msg = '(' + file + ':' + line + ':' + column + '):\twarning: ' + message + '\n';
+			this.stream.write(msg);
+		}
+
+		info(message) {
+			var msg = '# ' + message + '\n';
+			this.stream.write(msg);
+		}
 	}
 
 	/*
@@ -474,20 +508,6 @@ module Webkool {
 			}
 			return (output);
 		}
-
-
-
-		public dump() {
-			console.log('##################################');
-			for (var i = 0; i < this.buffers.length; i++) {
-				console.log('[' + this.buffers[i].name + ']['+ this.buffers[i].side +'] = ');
-				for (var j = 0; j < this.buffers[i].data.length; j++) {
-					console.log('\t\t[' + j + ']', this.buffers[i].data[j]);
-				}
-				console.log('------------------------------');
-			}
-			console.log('##################################\n');
-		}
 	}	
 
 
@@ -657,13 +677,17 @@ module Webkool {
 			var filename = pr.resolveCheck(this.attrs.href, options.includes);
 
 			var extension = pathm.extname(filename);
-			console.log('# including ' + filename);
-			parser.wait(this);
-			this.outputType = '.wk'
-			doParseDocument(filename, function (buffers) {
-				element.preparedBuffers = buffers;
-				parser.dequeue(element);
-			});
+			if (filename !== null) {
+				logger.info('including ' + filename);
+				parser.wait(this);
+				this.outputType = '.wk'
+				doParseDocument(filename, function (buffers) {
+					element.preparedBuffers = buffers;
+					parser.dequeue(element);
+				});
+			}
+			else
+				logger.error(this.location.file, this.location.line, this.location.col, '<' + this.attrs.href + '> file not found')
 		}
 
 		printBody(buffers: BufferManager, side: SideType) {
@@ -844,10 +868,10 @@ module Webkool {
 			var cleaned;
 
 			if (this.attrs.hasOwnProperty('href'))
-				cleaned = this.templateContent.replace(/\s+/g, ' ');
+				cleaned = this.templateContent.replace(/\n/g, '\\n').replace(/\t/g, '\\t');
 			else
-				cleaned = this.text.replace(/\s+/g, ' ');
-			cleaned = cleaned.replace(/\"/g, '\\\"'); 		//keep \ in file;
+				cleaned = this.text.replace(/\n/g, '\\n').replace(/\t/g, '\\t');
+			cleaned = cleaned.replace(/\"/g, '\\\"');
 
 			var bufferString = new Buffer(cleaned);
 			var streamBuff = new sbuff.WritableStreamBuffer();
@@ -900,17 +924,30 @@ module Webkool {
 			bind: Bind,
 			template: Template
 		};
-		elementAttrs = ['url', 'type'];
+		elementAttrs = ['url', 'type', 'method'];
+		methodName = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'COPY', 'HEAD', 
+		'OPTIONS', 'LINK', 'UNLINK', 'PURGE', 'ALL'];
 		name = 'handler';
 
 		constructor(parser, name, attrs, filename) {
 			super(parser, name, attrs, filename);
+
+			var filename = pr.resolveCheck(this.location.file, options.includes);
+			if (attrs.method) {
+				if (this.methodName.indexOf(attrs.method) == -1)
+					logger.warning(filename, this.location.line, 0, '<' + attrs.method + '> unknow method');
+			}
+			if (simApp.addHandler(attrs.method || 'ALL', attrs.url, {}) == false) {
+				logger.warning(filename, this.location.line, 0, 'handler ' + (attrs.method || 'ALL') + ' ' + attrs.url + ' has been already defined');
+			}
 		}
 
 		printHeader(buffers: BufferManager, side: SideType) {
 			var data = '';
 
-			data += 'application.addHandler(\"';
+			data += 'application.addHandler(';
+			data += '\"' + (this.attrs.method || 'ALL') + '\"';
+			data += ', \"';
 			data += this.attrs.url;
 			data += '\", Object.create(Handler.prototype, {\n';
 			data += 'url : { value: \"';
@@ -1048,7 +1085,7 @@ module Webkool {
 		else
 			options.jshint = loadJsHintFile(null);
 		if (argv.v) {
-			console.log('version: ' + version);
+			logger.info('version: ' + version);
 		}
 		if (argv.o)
 			options.output = (argv.o instanceof Array) ? (argv.o.splice(-1)) : (argv.o);
@@ -1062,13 +1099,14 @@ module Webkool {
 	*/
 
 	function loadJsHintFile(file) {
+		var _logger = logger;
 		var data = '';
 		try {
 			if (file == null) { throw Error('default file') }
 			data = fs.readFileSync(file, 'utf-8')
 		}
 		catch (err) {
-			console.log('using default jshint config file');
+			_logger.info('using default jshint config file');
 			try {
 				data = fs.readFileSync(__dirname + '/../sources/templates/jshint.json', 'utf-8')
 			} catch (e) { data = '' }
@@ -1079,10 +1117,7 @@ module Webkool {
 
 	function hint(chunk, sourceMap, output) {
 		if (jshint(chunk, options.jshint) == false) {
-			console.log();
-			printHintErrors(jshint.data().errors, sourceMap, output);
-			console.log();
-			return (false);
+			return (printHintErrors(jshint.data().errors, sourceMap, output));
 		}
 		return (true);
 	}
@@ -1099,7 +1134,6 @@ module Webkool {
 		parser.currentElement = null;
 		parser.currentText = '';
 		filename = pr.resolveCheck(filename, options.includes);
-
 		addFileInSourceMapFolder(filename, options.output);
 		parser.roots = new Roots(parser, 'roots', null, filename);
 
@@ -1110,7 +1144,8 @@ module Webkool {
 		}
 		parser.dequeue = function (element) {
 			var index = this.elements.indexOf(element);
-			if (index < 0) console.log('>>>> DEQUEUE UNKNOWN ELEMENT');
+			if (index < 0) 
+				logger.error('DEQUEUE UNKNOWN ELEMENT');
 			this.elements.splice(index, 1);
 			if (this.elements.length == 0) {
 				var buffers = new BufferManager();
@@ -1121,10 +1156,10 @@ module Webkool {
 				}
 		}
 		parser.error = function (e) {
-			console.log(parser.filename + ':' + parser.getCurrentLineNumber() + ': error:' + e);
+			logger.error(parser.filename, parser.getCurrentLineNumber(), 0, e);
 		}
 		parser.addListener('error', function(e) {
-			console.log(parser.filename + ':' + parser.getCurrentLineNumber() + ': error:' + e);
+			logger.error(parser.filename, parser.getCurrentLineNumber(), 0, e);
 		});
 		parser.addListener('startElement', function(name, attrs) {
 			this.currentElement.processElement(parser, name, attrs, filename);
@@ -1140,11 +1175,11 @@ module Webkool {
 				this.currentElement.prepare(parser);
 				parser.dequeue(parser);
 			} catch (err) {
-				console.log(err);
+				logger.error(filename, 0, 0, err.message);
 			}
 		});
 		
-		console.log('# parsing ' + parser.filename);
+		logger.info('parsing ' + parser.filename);
 		parser.input = fs.createReadStream(parser.filename);
 		parser.input.pipe(parser);
 	}
@@ -1232,9 +1267,9 @@ module Webkool {
 					fs.writeFile(outputSourceMapPath, sourceMapGenerated);
 					fs.writeFile(outputPath, txt);
 	
-					console.log('# saving in file ' + outputPath.substr(0, outputPath.length - '.tmp'.length));
-					console.log('# saving in file ' + outputSourceMapPath.substr(0, outputSourceMapPath.length - '.tmp'.length));
 
+					logger.info('saving in file ' + outputPath.substr(0, outputPath.length - '.tmp'.length))						
+					logger.info('saving in file ' + outputSourceMapPath.substr(0, outputSourceMapPath.length - '.tmp'.length))
 
 
 					if (buff[i].name == '.js') {
@@ -1299,7 +1334,7 @@ module Webkool {
 			fin.pipe(fout);
 		}
 		catch (e) {
-			console.log('error: file not found <' + file + '>');
+			logger.error('<' + file + '> file not found');
 		}
 	}
 
@@ -1313,46 +1348,46 @@ module Webkool {
 		});
 	}
 
-	
-
 	function unitPath() {
-		var paths = [
-			'/plop/lal/toto',
-			'/plop/lal/',
-			'toto',
-			'./',
-			'',
-			'../plop/',
-			'../plop',
-			'plop/lal/toto',
-			'plop/lal/toto/'
-		];
+        var paths = [
+            '/plop/lal/toto',
+            '/plop/lal/',
+            'toto',
+            './',
+            '',
+            '../plop/',
+            '../plop',
+            'plop/lal/toto',
+            'plop/lal/toto/'
+        ];
 
-		paths.forEach(function (itm) {
-			console.log('---------------------------');
-			console.log('output: <' + itm + '>');
-			var p = new PathRes(itm);
+        paths.forEach(function (itm) {
+            console.log('---------------------------');
+            console.log('output: <' + itm + '>');
+            var p = new PathRes(itm);
 
-			console.log('root: <' + p.getRoot() + '>');
-			console.log('file: <' + p.getFile() + '>');
-			console.log('out: <SERVER><' + p.getOutputName(SideType.SERVER)[1] + '>');
-			console.log('out: <CLIENT><' + p.getOutputName(SideType.CLIENT)[0] + '>');
-			console.log('out: <BOTH><' + p.getOutputName(SideType.BOTH) + '>');
-			console.log('sourcemap: <' + p.getSourceMap() + '>');
-			console.log('resolve: <plop.js><' + p.resolve(p.getRoot(), 'plop.js') + '>');
-			console.log('resolve: <../plop.js><' + p.resolve(p.getRoot(),'../plop.js') + '>');
-			console.log('resolve: <plop/plop.js><' + p.resolve(p.getRoot(),'plop/plop.js') + '>');
-			console.log('resolve: <../plop/plop.js>' + p.resolve(p.getRoot(),'../plop/plop.js') + '>');
-			console.log('resolve: <><' + p.resolve(p.getRoot(),'') + '>');
-			console.log('resolve: <plap/><' + p.resolve(p.getRoot(),'plap/') + '>');
-		});
-	}
+            console.log('root: <' + p.getRoot() + '>');
+            console.log('file: <' + p.getFile() + '>');
+            console.log('out: <SERVER><' + p.getOutputName(1 /* SERVER */)[1] + '>');
+            console.log('out: <CLIENT><' + p.getOutputName(2 /* CLIENT */)[0] + '>');
+            console.log('out: <BOTH><' + p.getOutputName(0 /* BOTH */) + '>');
+            console.log('sourcemap: <' + p.getSourceMap() + '>');
+            console.log('resolve: <plop.js><' + p.resolve(p.getRoot(), 'plop.js') + '>');
+            console.log('resolve: <../plop.js><' + p.resolve(p.getRoot(), '../plop.js') + '>');
+            console.log('resolve: <plop/plop.js><' + p.resolve(p.getRoot(), 'plop/plop.js') + '>');
+            console.log('resolve: <../plop/plop.js>' + p.resolve(p.getRoot(), '../plop/plop.js') + '>');
+            console.log('resolve: <><' + p.resolve(p.getRoot(), '') + '>');
+            console.log('resolve: <plap/><' + p.resolve(p.getRoot(), 'plap/') + '>');
+        });
+    }
+
+
 
 	export function run() {
+		logger 	= new Logger(process.stdout);
 		doParseArguments(options);
+		pr 		= new PathRes(options.output);
 
-
-		pr = new PathRes(options.output);
 		options.includes.push(pr.getRoot());
 		var entryFile = pr.resolveCheck(options.inputs.shift(), options.includes);
 		var webkoolFile = pr.resolve(pr.getCurrentFolder(), 'webkool.wk');
@@ -1361,7 +1396,6 @@ module Webkool {
 		checkWebKoolWkFileExistence(webkoolFile);
 		generateSourceMapFolder(options.output);
 		//begin the parsing of webkool.wk
-
 
 		doParseDocument(webkoolFile, function (initialBuffers:BufferManager) {
 			var _buffers = initialBuffers;

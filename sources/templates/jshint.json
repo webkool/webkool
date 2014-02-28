@@ -2,7 +2,6 @@
   	"undef": 	false,
   	"unused": 	false,
   	"sub": 		true,
-    "boss":   true,
   	"predef":		[
   		"require",
   		"console",

@@ -10,7 +10,7 @@
     "api"
   ],
 
-  "version": "0.3.3",
+  "version": "0.4.0",
   "preferGlobal": true,
 
   "license":  "Apache License 2.0",
@@ -52,7 +52,7 @@
     "optimist":           "*",
     "color-log":          "*",
     "exec-sync":          "*",
-    "stream-buffers":     "*"
+    "stream-buffers":     "*",
   },
   
   "engines": {
