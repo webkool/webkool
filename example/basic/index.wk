@@ -1,32 +1,72 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <application xmlns="http://www.webkool.net/1.0/">
 
+	<include href='plop.js' />
+
 	<property id="name">test</property>
 	<property id="port">4242</property>
-	<client>
-		<handler url='/home' type='text.html'>
-			<template system='square'>
-				<![CDATA[
-					<h1>HOME</h1>
-				]]>
-			</template>
-			
-		</handler>
-	</client>
+
 	<server>
-		<handler url='/' type='text.html'>
-			<on id='request'>
-				model.title = 'bonjour';
-			</on>
-			<template system='square'>
-				<![CDATA[
-					#{include("/header")}#
-					<h1>plop</h1>
-					#{include("/footer")}#
-				]]>
-			</template>
-			
+		<handler method='GET' url='/user/' type='text/html'>
+			<template><![CDATA[GET USER]]></template>			
 		</handler>
+
+		<handler method='POST' url='/user/' type='text/html'>
+			<template><![CDATA[POST USER]]></template>			
+		</handler>
+
+		<handler method='PUT' url='/user/' type='text/html'>
+			<template><![CDATA[PUT USER]]></template>			
+		</handler>
+
+		<handler method='DELETE' url='/user/' type='text/html'>
+			<template><![CDATA[DELETE USER]]></template>			
+		</handler>
+
+
+
+
+
+		<handler method='GET' url='/user/me' type='text/html'>
+			<template><![CDATA[GET USER/ME]]></template>			
+		</handler>
+
+		<handler method='POST' url='/user/me' type='text/html'>
+			<template><![CDATA[POST USER/ME]]></template>			
+		</handler>
+
+		<handler method='GET' url='/user/me' type='text/html'>
+			<template><![CDATA[PUT USER/ME]]></template>			
+		</handler>
+
+		<handler url='/user/me' type='text/html'>
+			<template><![CDATA[ALL USER/ME]]></template>
+		</handler>
+
+
+		<handler method='GET' url='/use/:name' type='text/html'>
+			<on id='request'>
+				model.name = query.name
+				if (a = 10) {}
+			</on>
+			<template><![CDATA[GET USER #name#]]></template>
+		</handler>
+
+		<handler method='POST' url='/use/:name' type='text/html'>
+			<on id='request'>model.name = query.name;</on>
+			<template><![CDATA[POST USER #name#]]></template>			
+		</handler>
+
+		<handler method='PUT' url='/use/:name' type='text/html'>
+			<on id='request'>model.name = query.name;</on>
+			<template><![CDATA[PUT USER #name#]]></template>			
+		</handler>
+
+		<handler method='DELETE' url='/use/:name' type='text/html'>
+			<on id='request'>model.name = query.name;</on>
+			<template><![CDATA[DELETE USER #name#]]></template>			
+		</handler>
+
 	
 	</server>
 	<template id='/header' system="square">

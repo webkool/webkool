@@ -89,4 +89,15 @@ open-source platform to develop client and/or server web application.
 
 -	fix file saving step
 
+**0.3.3**:
+
+- 	dynamic route
+
+**0.4.0**:
+
+- 	handler for a specific method
+-	handler with dynamic url
+-	add warning on the std ouput
+-	fix include output error
+
 

@@ -9,6 +9,7 @@
 declare var Buffer;
 declare var application;
 declare var require;
+declare	var exports;
 
 module httpDate {
 	var asctime = /^(Mon|Tue|Wed|Thu|Fri|Sat|Sun) (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) (..| .) (..):(..):(..) (....)$/, // Sun Nov  6 08:49:37 1994 ; ANSI C asctime() format
@@ -55,6 +56,13 @@ class Model {
 			result = JSON.stringify(this, null, 4);
 		}
 		return result;
+	}
+
+	escapeHTML(s) { 
+    	return s.replace(/&/g, '&amp;')
+            .replace(/"/g, '&quot;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
 	}
 }
 
@@ -128,6 +136,7 @@ class Context {
 class Handler {
 	url;
 	contentType = 'text/html';
+	compiled_route;
 
 	on_checkAccess(context, model, query) {
 		return true;
@@ -142,7 +151,7 @@ class Handler {
 	}
 
 	on_filter(context, model, query) {
-		return this.url == context.url;
+		return false;
 	}
 
 	on_load(context, model, query) {
@@ -255,19 +264,38 @@ class Template {
 }
 
 class Application {
-  handlers;
+  static_handlers;
+  dynamic_handlers;
   model;
   properties;
   templates;
 
 	constructor() {
-		this.handlers = {};
-		this.properties = {};
-		this.templates = {};
+		this.static_handlers 	= {};
+		this.dynamic_handlers	= {};
+		this.properties 		= {};
+		this.templates 			= {};
 	}
 
-	addHandler(name, handler) {
-		this.handlers[name] = handler;
+	addHandler(method, url, handler) {
+		var isDynamic = /:([^\/]+)/g;
+
+		if (isDynamic.test(url)) {
+			handler.compiled_route = this.compileRoute(url);
+			if (!this.dynamic_handlers.hasOwnProperty(url))
+				this.dynamic_handlers[url] = {};
+			if (this.dynamic_handlers[url].hasOwnProperty(method))
+				return (false);
+			this.dynamic_handlers[url][method] = handler;
+		}
+		else {
+			if (!this.static_handlers.hasOwnProperty(url))
+				this.static_handlers[url] = {};
+			if (this.static_handlers[url].hasOwnProperty(method))
+				return (false);
+			this.static_handlers[url][method] = handler;
+		}
+		return (true);
 	}
 
 	addObserver(name, selector) {
@@ -300,6 +328,49 @@ class Application {
 		throw (error);
 	}
 
+	compileRoute(route) {
+		var attrs 		= [];
+		var reg_replace = /:([^\/]+)/gi;
+
+		var compiled_route = route.replace(reg_replace, function (match, select) {
+			attrs.push(select);
+			return ('([^\/]+)');
+		});
+		compiled_route = '^' + compiled_route.replace(/\//gi, '\\/') + '$';
+		var regexp = new RegExp(compiled_route, 'i');
+		return ({ 
+			regexp: regexp,
+			fields:	attrs
+		});
+	}
+
+	matchWithDynamicHandler(method, url, query) {
+		var extract;
+		var params = {};
+		var handlers = this.dynamic_handlers;
+		var route;
+		var methodName;
+
+		for (route in handlers) {
+			methodName = null;
+			if (handlers[route].hasOwnProperty(method))
+				methodName = method;
+			else if (handlers[route].hasOwnProperty('ALL'))
+				methodName = 'ALL';
+			if (methodName) {
+				extract = handlers[route][methodName].compiled_route.regexp.exec(url);
+				if (extract) {
+					for (var i = 1; i < extract.length; i++) {
+						query[handlers[route][methodName].compiled_route.fields[i - 1]] = extract[i];
+					}
+					return (handlers[route][methodName]);
+				}
+			}
+			
+		}
+		return (null);
+	}
+
 	parseQuery(url) {
 		var query = {}, param, params, i, l;
 		if (url) {
@@ -319,19 +390,27 @@ class Application {
 		this.requestWithContext(context, url, query, false);
 	}
 
-
 	requestWithContext(context, url, query, external) {
-		var handler, handlers, offset, clone = {};
+		var static_handlers, dynamic_handlers, concat_handler = {};
+		var attrname;
+		var route;
+		var tmp;
+		var handler;
+		var offset;
+		var method;
+		var methodName;
+		var clone = {};
+
 		try {
-		
-			//copy des attrs (pour eviter les modification par references);
+			//copy query
 			if (query) {
 				for (var attr in query) {
 					clone[attr] = query[attr];
 				}
 				query = clone;
 			}
-
+			//add in query
+			url = decodeURIComponent(url);
 			offset = url.indexOf('?');
 			if (offset > 0) {
 				context.url = url.substring(0, offset);
@@ -341,20 +420,41 @@ class Application {
 				context.url = url;
 				query = query || {};
 			}
+			//select handler
+			if (context.request)
+				method = context.request.method;
+			else
+				method = 'GET';//hum...
 
-			handlers = this.handlers;
-			if (handlers.hasOwnProperty(context.url) && (!external || (external && handlers[context.url].contentType))) {
-				handler = handlers[context.url];
+			static_handlers = this.static_handlers;
+			dynamic_handlers = this.dynamic_handlers;
+			if (static_handlers.hasOwnProperty(context.url) && 
+				((static_handlers[url].hasOwnProperty(method) && (!external || (external && static_handlers[context.url][method].contentType))) ||
+				(static_handlers[url].hasOwnProperty('ALL')) && (!external || (external && static_handlers[context.url]['ALL'].contentType)))) {
+
+				handler = static_handlers[context.url][method] || static_handlers[context.url]['ALL'];
+			}
+			else if ((tmp = this.matchWithDynamicHandler(method, context.url, query))) {
+				handler = tmp;
 			}
 			else {
-				for (handler in handlers) {
-					handler = handlers[handler];
-					if ((!external || (external && handler.contentType)) && handler.on_filter(context, context.model, query)) {
-						break;
-					}
+				for (route in static_handlers) {
+					methodName = null;
+					if (static_handlers[route].hasOwnProperty(method))
+						methodName = method;
+					else if (static_handlers[route].hasOwnProperty('ALL'))
+						methodName = 'ALL';
+					if (methodName) {
+						handler = static_handlers[route][methodName];
+						if ((!external || (external && handler.contentType)) && 
+							handler.on_filter(context, context.model, query)) {
+							break;
+						}	
+					}					
 					handler = null;
-				}
+				}				
 			}
+			//sync
 			if (handler) {
 				context.wait(handler, query);
 				handler.on_request(context, context.model, query);
@@ -364,15 +464,16 @@ class Application {
 				this.handlerNotFound(context, url);
 			}
 		}
-		catch (e) {
-			if (handler) {
-				handler.on_error(context, context.model, query, e);
-			}
-			else {
-				this.internalError(context, e);
-			}
+		catch (err) {
+			if (handler)
+				handler.on_error(context, context.model, query, err);
+			else
+				this.internalError(context, err);
 		}
 	}
+
+
+	
 
 	render(url) {
 		var model = this.getModel();
@@ -541,3 +642,6 @@ class Server extends Application {
 
 	}
 }
+
+if (exports)
+	exports.Application = Application;
