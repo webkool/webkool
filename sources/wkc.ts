@@ -1,5 +1,6 @@
 /*
 	Webkool parser
+
 */
 
 
@@ -40,7 +41,7 @@ module Webkool {
 	** Template and Css Engine
 	*/
 
-	var version = '0.4.0'; 						//current version
+	var version = '0.4.1'; 						//current version
 
 	var webkool = require('../lib/client/webkool.js');
 
@@ -58,7 +59,7 @@ module Webkool {
 	/*
 	**	require
 	*/
-	
+	var terminal = require('color-terminal');
 	var expat 	= require('node-expat'); 		//parser
 	var sm 		= require('source-map');	 	//source mapping
 	var sbuff 	= require('stream-buffers'); 	//utils buffers
@@ -68,7 +69,7 @@ module Webkool {
 	var async	= require('async');
 	var stream 	= require('stream');
 
-	var simApp 	= new webkool.Application();
+	var simApp 	= { client: new webkool.Application(), server: new webkool.Application() };
 	var logger;
 
 	var outputJS,
@@ -149,21 +150,24 @@ module Webkool {
 			var msg;
 
 			if (typeof line === 'undefined' && typeof column === 'undefined' && typeof message === 'undefined')
-				msg = 'error: ' + file + '\n';
+				msg = '# ERROR in file ' + file + '\n';
 			else {
-				msg = '(' + file + ':' + line + ':' + column + '):\terror: ' + message + '\n';
+				msg = '# ERROR in file ' + file + ':' + line + ':' + column + ': ' + message + '\n';
 			}
-			this.stream.write(msg);
+			terminal.color('red').write(msg).reset();
+//			this.stream.write(msg);
 		}
 
 		warning(file, line, column, message) {
-			var msg = '(' + file + ':' + line + ':' + column + '):\twarning: ' + message + '\n';
-			this.stream.write(msg);
+			var msg = '# ' + 'WARNING in file ' + file + ':' + line + ':' + column + ': ' + message + '\n';
+//			this.stream.write(msg);
+			terminal.color('green').write(msg).reset();
 		}
 
 		info(message) {
 			var msg = '# ' + message + '\n';
-			this.stream.write(msg);
+			terminal.write(msg);
+//			this.stream.write(msg);
 		}
 	}
 
@@ -937,12 +941,16 @@ module Webkool {
 				if (this.methodName.indexOf(attrs.method) == -1)
 					logger.warning(filename, this.location.line, 0, '<' + attrs.method + '> unknow method');
 			}
-			if (simApp.addHandler(attrs.method || 'ALL', attrs.url, {}) == false) {
-				logger.warning(filename, this.location.line, 0, 'handler ' + (attrs.method || 'ALL') + ' ' + attrs.url + ' has been already defined');
-			}
+			
 		}
 
 		printHeader(buffers: BufferManager, side: SideType) {
+			var sideStr = side == SideType.CLIENT ? 'client' : 'server';
+			var filename = pr.resolveCheck(this.location.file, options.includes);
+
+			if (simApp[sideStr].addHandler(this.attrs.method || 'ALL', this.attrs.url, {}) == false) {
+				logger.warning(filename, this.location.line, 0, 'handler ' + (this.attrs.method || 'ALL') + ' ' + this.attrs.url + ' has been already defined');
+			}
 			var data = '';
 
 			data += 'application.addHandler(';

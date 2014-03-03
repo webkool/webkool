@@ -9,12 +9,9 @@
     "xml",
     "api"
   ],
-
-  "version": "0.4.0",
+  "version": "0.4.1",
   "preferGlobal": true,
-
-  "license":  "Apache License 2.0",
-
+  "license": "Apache License 2.0",
   "author": "haruni.net",
   "contributors": [
     {
@@ -22,39 +19,36 @@
       "email": "sb@haruni.net"
     },
     {
-      "name":   "Harold Ozouf",
-      "email":  "harold.ozouf@epitech.eu"
+      "name": "Harold Ozouf",
+      "email": "harold.ozouf@epitech.eu"
     }
   ],
-
-   "repository": {
+  "repository": {
     "type": "git",
     "url": "https://github.com/webkool/webkool.git"
   },
-
   "main": "./lib/webkool",
-
   "bin": {
     "wkc": "./bin/wkc"
   },
-
   "dependencies": {
+    "color-terminal":     "*",
     "source-map-support": "*",
-    "jshint":             "*",
-    "source-map":         "*",
-    "less":               "*",
-    "async":              "*",
-    "hogan.js":           "*",
-    "mysql":              "*",
-    "node-sass":          "*",
-    "formidable":         "*",
-    "node-expat":         "*",
-    "optimist":           "*",
-    "color-log":          "*",
-    "exec-sync":          "*",
-    "stream-buffers":     "*"
+    "jshint": "*",
+    "source-map": "*",
+    "less": "*",
+    "async": "*",
+    "hogan.js": "*",
+    "mysql": "*",
+    "node-sass": "*",
+    "formidable": "*",
+    "node-expat": "*",
+    "optimist": "*",
+    "color-log": "*",
+    "exec-sync": "*",
+    "stream-buffers": "*",
+    "log-colors": "^1.0.0"
   },
-
   "engines": {
     "node": "*"
   }

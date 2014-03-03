@@ -100,4 +100,11 @@ open-source platform to develop client and/or server web application.
 -	add warning on the std ouput
 -	fix include output error
 
+**0.4.1**:
+
+-	fix error syntax
+-	error and warning color
+-	fix exports for client side
+-	fix method already declared between client and server
+
 

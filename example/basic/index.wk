@@ -1,79 +1,63 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <application xmlns="http://www.webkool.net/1.0/">
 
-	<include href='plop.js' />
 
 	<property id="name">test</property>
 	<property id="port">4242</property>
 
 	<server>
-		<handler method='GET' url='/user/' type='text/html'>
+		<handler method='GET' url='/' type='text/html'>
+			<on id='request'>
+				x = 2
+			</on>
+			<template system='square'>
+				<![CDATA[
+					#{include("/header")}#
+						<h1>HOME</h1>
+						<a href="javascript:application.request('/lol');">click here</a>
+					#{include("/footer")}#
+				]]>
+			</template>
+		</handler>
+		<handler method='GET' url='/client.js' type='text/html'>
+			<on id='render'>
+				*/
+				return (require('fs').readFileSync('build/plop.client.js', 'utf-8'));
+			</on>
+		</handler>
+		<handler method='GET' url='/user' type='text/html'>
 			<template><![CDATA[GET USER]]></template>			
 		</handler>
 
-		<handler method='POST' url='/user/' type='text/html'>
+		<handler method='POST' url='/user' type='text/html'>
 			<template><![CDATA[POST USER]]></template>			
 		</handler>
 
-		<handler method='PUT' url='/user/' type='text/html'>
+		<handler method='PUT' url='/user' type='text/html'>
 			<template><![CDATA[PUT USER]]></template>			
 		</handler>
 
-		<handler method='DELETE' url='/user/' type='text/html'>
+		<handler method='DELETE' url='/user' type='text/html'>
 			<template><![CDATA[DELETE USER]]></template>			
-		</handler>
-
-
-
-
-
-		<handler method='GET' url='/user/me' type='text/html'>
-			<template><![CDATA[GET USER/ME]]></template>			
-		</handler>
-
-		<handler method='POST' url='/user/me' type='text/html'>
-			<template><![CDATA[POST USER/ME]]></template>			
-		</handler>
-
-		<handler method='GET' url='/user/me' type='text/html'>
-			<template><![CDATA[PUT USER/ME]]></template>			
-		</handler>
-
-		<handler url='/user/me' type='text/html'>
-			<template><![CDATA[ALL USER/ME]]></template>
-		</handler>
-
-
-		<handler method='GET' url='/use/:name' type='text/html'>
-			<on id='request'>
-				model.name = query.name
-				if (a = 10) {}
-			</on>
-			<template><![CDATA[GET USER #name#]]></template>
-		</handler>
-
-		<handler method='POST' url='/use/:name' type='text/html'>
-			<on id='request'>model.name = query.name;</on>
-			<template><![CDATA[POST USER #name#]]></template>			
-		</handler>
-
-		<handler method='PUT' url='/use/:name' type='text/html'>
-			<on id='request'>model.name = query.name;</on>
-			<template><![CDATA[PUT USER #name#]]></template>			
-		</handler>
-
-		<handler method='DELETE' url='/use/:name' type='text/html'>
-			<on id='request'>model.name = query.name;</on>
-			<template><![CDATA[DELETE USER #name#]]></template>			
-		</handler>
-
-	
+		</handler>	
 	</server>
+
+	<client>
+		<handler url='/lol' type='text/html'>
+			<template><![CDATA[/LOL]]></template>
+		</handler>
+
+		<handler method='GET' url='/user' type='text/html'>
+			<template><![CDATA[GET USER]]></template>			
+		</handler>
+	</client>
+
 	<template id='/header' system="square">
 		<![CDATA[
 			<html>
 				<head>
-					<title>#title#</title>
+					<title>title</title>
+					<script type="text/javascript" src="client.js"></script>
 				</head>
 				<body>
 		]]>

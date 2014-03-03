@@ -424,7 +424,7 @@ class Application {
 			if (context.request)
 				method = context.request.method;
 			else
-				method = 'GET';//hum...
+				method = 'GET';
 
 			static_handlers = this.static_handlers;
 			dynamic_handlers = this.dynamic_handlers;
