@@ -1,5 +1,5 @@
 {
-  "name": "webkool",  
+  "name": "webkool",
   "description": "open-source platform to develop client and/or server web application and API.",
   "keywords": [
     "client",
@@ -16,7 +16,7 @@
   "license":  "Apache License 2.0",
 
   "author": "haruni.net",
-  "contributors": [ 
+  "contributors": [
     {
       "name": "Sebastien Burel",
       "email": "sb@haruni.net"
@@ -52,9 +52,9 @@
     "optimist":           "*",
     "color-log":          "*",
     "exec-sync":          "*",
-    "stream-buffers":     "*",
+    "stream-buffers":     "*"
   },
-  
+
   "engines": {
     "node": "*"
   }
