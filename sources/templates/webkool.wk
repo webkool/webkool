@@ -1,11 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <application xmlns="http://www.webkool.net/1.0/">
 	<client>
-		<script>
-			/*jshint -W079 */
-			var exports = exports || {};
-			/*jshint +W079 */
-		</script>
 		<script href='webkool.js'></script>
 		<script href='hogan-2.0.0.js'></script>
 		<script>

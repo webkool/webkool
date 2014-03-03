@@ -43,8 +43,6 @@ module Webkool {
 
 	var version = '0.4.1'; 						//current version
 
-	var webkool = require('../lib/client/webkool.js');
-
 	var templateEngine = {
 		'square':	require('../lib/square'), 	//internal square templating module
 		'mustache':	require('../lib/mustache') 	//internal mustache(hogan.js) templating module
@@ -69,7 +67,7 @@ module Webkool {
 	var async	= require('async');
 	var stream 	= require('stream');
 
-	var simApp 	= { client: new webkool.Application(), server: new webkool.Application() };
+	var simApp;
 	var logger;
 
 	var outputJS,
@@ -134,6 +132,8 @@ module Webkool {
 		});
 		return (feedback.error === 0);
 	}
+
+	
 
 	/*
 	**	Logger
@@ -514,6 +514,33 @@ module Webkool {
 		}
 	}	
 
+	class	Router {
+		client;
+		server;
+
+		constructor() {
+			this.client = {};
+			this.server = {};
+		}
+
+		addHandler(side, method, url, file, line, column) {
+			var sideHandler = side == SideType.CLIENT ? this.client : this.server;
+			if (!sideHandler.hasOwnProperty(url))
+				sideHandler[url] = {};
+			if (sideHandler[url].hasOwnProperty(method)) {
+				var info = sideHandler[url][method];
+				var filename = pr.resolveCheck(file, options.includes);
+				var filenamePrev = pr.resolveCheck(info.file, options.includes);
+
+				logger.warning(filename, line, column, ' method already defined in file ' + filenamePrev + ':' + info.line + ':' + info.column);
+			}
+			sideHandler[url][method] = {
+				file:	file,
+				line:	line,
+				column:	column
+			};
+		}
+	}
 
 	/*
 	**	Nodes
@@ -940,17 +967,12 @@ module Webkool {
 			if (attrs.method) {
 				if (this.methodName.indexOf(attrs.method) == -1)
 					logger.warning(filename, this.location.line, 0, '<' + attrs.method + '> unknow method');
-			}
-			
+			}			
 		}
 
 		printHeader(buffers: BufferManager, side: SideType) {
-			var sideStr = side == SideType.CLIENT ? 'client' : 'server';
-			var filename = pr.resolveCheck(this.location.file, options.includes);
+			simApp.addHandler(side, this.attrs.method || 'ALL', this.attrs.url, this.location.file, this.location.line, this.location.col);
 
-			if (simApp[sideStr].addHandler(this.attrs.method || 'ALL', this.attrs.url, {}) == false) {
-				logger.warning(filename, this.location.line, 0, 'handler ' + (this.attrs.method || 'ALL') + ' ' + this.attrs.url + ' has been already defined');
-			}
 			var data = '';
 
 			data += 'application.addHandler(';
@@ -1356,45 +1378,11 @@ module Webkool {
 		});
 	}
 
-	function unitPath() {
-        var paths = [
-            '/plop/lal/toto',
-            '/plop/lal/',
-            'toto',
-            './',
-            '',
-            '../plop/',
-            '../plop',
-            'plop/lal/toto',
-            'plop/lal/toto/'
-        ];
-
-        paths.forEach(function (itm) {
-            console.log('---------------------------');
-            console.log('output: <' + itm + '>');
-            var p = new PathRes(itm);
-
-            console.log('root: <' + p.getRoot() + '>');
-            console.log('file: <' + p.getFile() + '>');
-            console.log('out: <SERVER><' + p.getOutputName(1 /* SERVER */)[1] + '>');
-            console.log('out: <CLIENT><' + p.getOutputName(2 /* CLIENT */)[0] + '>');
-            console.log('out: <BOTH><' + p.getOutputName(0 /* BOTH */) + '>');
-            console.log('sourcemap: <' + p.getSourceMap() + '>');
-            console.log('resolve: <plop.js><' + p.resolve(p.getRoot(), 'plop.js') + '>');
-            console.log('resolve: <../plop.js><' + p.resolve(p.getRoot(), '../plop.js') + '>');
-            console.log('resolve: <plop/plop.js><' + p.resolve(p.getRoot(), 'plop/plop.js') + '>');
-            console.log('resolve: <../plop/plop.js>' + p.resolve(p.getRoot(), '../plop/plop.js') + '>');
-            console.log('resolve: <><' + p.resolve(p.getRoot(), '') + '>');
-            console.log('resolve: <plap/><' + p.resolve(p.getRoot(), 'plap/') + '>');
-        });
-    }
-
-
-
 	export function run() {
 		logger 	= new Logger(process.stdout);
 		doParseArguments(options);
 		pr 		= new PathRes(options.output);
+		simApp  = new Router();
 
 		options.includes.push(pr.getRoot());
 		var entryFile = pr.resolveCheck(options.inputs.shift(), options.includes);

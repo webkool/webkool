@@ -29,7 +29,7 @@
 			<template><![CDATA[GET USER]]></template>			
 		</handler>
 
-		<handler method='POST' url='/user' type='text/html'>
+		<handler method='GET' url='/user' type='text/html'>
 			<template><![CDATA[POST USER]]></template>			
 		</handler>
 

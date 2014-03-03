@@ -642,6 +642,3 @@ class Server extends Application {
 
 	}
 }
-
-if (exports)
-	exports.Application = Application;
