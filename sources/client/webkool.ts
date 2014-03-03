@@ -58,7 +58,7 @@ class Model {
 		return result;
 	}
 
-	escapeHTML(s) { 
+	escapeHTML(s) {
     	return s.replace(/&/g, '&amp;')
             .replace(/"/g, '&quot;')
             .replace(/</g, '&lt;')
@@ -338,7 +338,7 @@ class Application {
 		});
 		compiled_route = '^' + compiled_route.replace(/\//gi, '\\/') + '$';
 		var regexp = new RegExp(compiled_route, 'i');
-		return ({ 
+		return ({
 			regexp: regexp,
 			fields:	attrs
 		});
@@ -366,7 +366,7 @@ class Application {
 					return (handlers[route][methodName]);
 				}
 			}
-			
+
 		}
 		return (null);
 	}
@@ -378,7 +378,7 @@ class Application {
 			l = params.length;
 			for (i = 0; i < l; i += 1) {
 				param = params[i].split('=');
-				if (param.length == 2) 															
+				if (param.length == 2)
 					query[param[0]] = decodeURIComponent(param[1]);
 			}
 		}
@@ -428,9 +428,9 @@ class Application {
 
 			static_handlers = this.static_handlers;
 			dynamic_handlers = this.dynamic_handlers;
-			if (static_handlers.hasOwnProperty(context.url) && 
-				((static_handlers[url].hasOwnProperty(method) && (!external || (external && static_handlers[context.url][method].contentType))) ||
-				(static_handlers[url].hasOwnProperty('ALL')) && (!external || (external && static_handlers[context.url]['ALL'].contentType)))) {
+			if (static_handlers.hasOwnProperty(context.url) &&
+				((static_handlers[context.url].hasOwnProperty(method) && (!external || (external && static_handlers[context.url][method].contentType))) ||
+				(static_handlers[context.url].hasOwnProperty('ALL')) && (!external || (external && static_handlers[context.url]['ALL'].contentType)))) {
 
 				handler = static_handlers[context.url][method] || static_handlers[context.url]['ALL'];
 			}
@@ -446,13 +446,13 @@ class Application {
 						methodName = 'ALL';
 					if (methodName) {
 						handler = static_handlers[route][methodName];
-						if ((!external || (external && handler.contentType)) && 
+						if ((!external || (external && handler.contentType)) &&
 							handler.on_filter(context, context.model, query)) {
 							break;
-						}	
-					}					
+						}
+					}
 					handler = null;
-				}				
+				}
 			}
 			//sync
 			if (handler) {
@@ -473,7 +473,7 @@ class Application {
 	}
 
 
-	
+
 
 	render(url) {
 		var model = this.getModel();
