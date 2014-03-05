@@ -72,6 +72,8 @@ class Context {
   model;
   request;
   response;
+  rootHandler;
+  rootQuery;
   url;
 
 	constructor(request,response) {
@@ -96,15 +98,23 @@ class Context {
 	}
 
 	synchronize() {
-		var handler, query, buffer, text;
+		var handler, query;
 		if (this.handlers.length>0) {
 			if (this.queries[this.queries.length-1]) {
 				handler = this.handlers.pop();
 				query = this.queries.pop();
 				handler.on_complete(this, this.model, query);
+				this.synchronize();
+			}
+		}
+		else {
+			handler = this.rootHandler;
+			query = this.rootQuery;
+			if (handler.contentType) {
+				var buffer, text;
 				if (this.response) {
 					try {
-						text = handler.on_render(this, this.model);
+						text = handler.on_render(this, this.model, query);
 						if (text) {
 							buffer = new Buffer(text);
 							this.response.writeHead(200, {'Content-Type': handler.contentType, 'Content-Length': buffer.length});
@@ -116,18 +126,22 @@ class Context {
 					}
 				}
 				else {
-					text = handler.on_render(this, this.model);
+					text = handler.on_render(this, this.model, query);
 					if (text) {
 						document.body.innerHTML = handler.on_render(this, this.model);
 						handler.on_load(this, this.model, query);
 					}
 				}
-				this.synchronize();
 			}
+			this.rootHandler = this.rootQuery = undefined;
 		}
 	}
 
 	wait(handler, query) {
+		if (this.handlers.length==0) {
+			this.rootHandler = handler;
+			this.rootQuery = query;
+		}
 		this.handlers.push(handler);
 		this.queries.push(query);
 	}
