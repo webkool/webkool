@@ -539,10 +539,12 @@ class Server extends Application {
 		m4v: 'video/mp4',
 		mp3: 'audio/mp3',
 		mp4: 'video/mp4',
+		map: 'application/json',
 		opml: 'text/xml',
 		png: 'image/png',
 		rss: 'application/rss+xml',
 		ttf: 'application/octet-stream',
+		wk: 'application/xml',
 		xml: 'application/xml'
 	}
 
