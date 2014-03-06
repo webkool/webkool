@@ -69,6 +69,7 @@ var Webkool;
     var outputJS, outputCSS, pr, options = {
         client: false,
         server: false,
+        color: true,
         target: {},
         includes: [__dirname + '/../lib/client/', ''],
         inputs: [],
@@ -143,7 +144,11 @@ var Webkool;
             else {
                 msg = '# ERROR in file ' + file + ':' + line + ':' + column + ': ' + message + '\n';
             }
-            terminal.color('red').write(msg).reset();
+            if (options.color) {
+                terminal.color('red').write(msg).reset();
+            } else {
+                terminal.write(msg);
+            }
             //			this.stream.write(msg);
         };
 
@@ -151,7 +156,11 @@ var Webkool;
             var msg = '# ' + 'WARNING in file ' + file + ':' + line + ':' + column + ': ' + message + '\n';
 
             //			this.stream.write(msg);
-            terminal.color('green').write(msg).reset();
+            if (options.color) {
+                terminal.color('green').write(msg).reset();
+            } else {
+                terminal.write(msg);
+            }
         };
 
         Logger.prototype.info = function (message) {
@@ -1018,10 +1027,11 @@ var Webkool;
     ** Parse Arguments
     */
     function doParseArguments(options) {
-        var argv = require('optimist').alias('c', 'client').alias('s', 'server').alias('v', 'version').boolean(['server', 'client', 'version']).string('o', 'i', 'hint').describe('c', 'compile for client').describe('s', 'compile for server').describe('i', 'include directory').describe('v', 'print the current version').describe('o', 'output basename').describe('hint', 'hint configuration').usage('$0' + ' version ' + version).demand('_').argv;
+        var argv = require('optimist').alias('c', 'client').alias('s', 'server').alias('v', 'version').alias('n', 'nocolor').boolean(['server', 'client', 'version', 'nocolor']).string('o', 'i', 'hint').describe('c', 'compile for client').describe('s', 'compile for server').describe('i', 'include directory').describe('n', 'no terminal color ouptut').describe('v', 'print the current version').describe('o', 'output basename').describe('hint', 'hint configuration').usage('$0' + ' version ' + version).demand('_').argv;
 
         options.server = argv.server;
         options.client = argv.client;
+        options.color = !argv.nocolor;
 
         if (argv.i) {
             if (argv.i instanceof Array)

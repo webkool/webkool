@@ -22,7 +22,7 @@ function epurString(str) {
 
 function sanitize(str) {
 	var res = '';
-	
+
 	str.split('\n').forEach(function (itm, idx, col) {
 		if (!((idx == 0 || idx == col.length - 1) && epurString(itm) == ''))
 			res += itm + '\n';
@@ -36,7 +36,7 @@ function sanitize(str) {
 
 module Webkool {
 	'use strict';
-	
+
 	/*
 	** Template and Css Engine
 	*/
@@ -47,13 +47,13 @@ module Webkool {
 		'square':	require('../lib/square'), 	//internal square templating module
 		'mustache':	require('../lib/mustache') 	//internal mustache(hogan.js) templating module
 	};
-	
+
 	var styleSheetEngine = {
 		'css':		'',
 		'less':		require('../lib/less'), 	//internal less module
 		'sass':		require('../lib/sass') 		//internal sass module
 	};
-	
+
 	/*
 	**	require
 	*/
@@ -63,7 +63,7 @@ module Webkool {
 	var sbuff 	= require('stream-buffers'); 	//utils buffers
 	var jshint	= require('jshint').JSHINT; 	//output syntax validation
 	var fs 		= require('fs');				//filesystem access
-	var pathm 	= require('path');				
+	var pathm 	= require('path');
 	var async	= require('async');
 	var stream 	= require('stream');
 
@@ -76,6 +76,7 @@ module Webkool {
 		options = { 							//command line options
 			client:		false,
 			server: 	false,
+			color: 		true,
 			target: 	{},
 			includes: 	[__dirname + '/../lib/client/', ''],
 			inputs: 	[],
@@ -110,7 +111,7 @@ module Webkool {
 				var fullPath = pathm.resolve(pathm.dirname(output));
 
 				if (location.line != null) {
-					var path = pathm.resolve(fullPath, pathm.relative(fullPath, location.source));					
+					var path = pathm.resolve(fullPath, pathm.relative(fullPath, location.source));
 					if (itm.code[0] === 'W') {
 						logger.warning(path, location.line, location.column, itm.code + ' ' + itm.reason);feedback.warning++;
 					}
@@ -133,7 +134,7 @@ module Webkool {
 		return (feedback.error === 0);
 	}
 
-	
+
 
 	/*
 	**	Logger
@@ -154,14 +155,24 @@ module Webkool {
 			else {
 				msg = '# ERROR in file ' + file + ':' + line + ':' + column + ': ' + message + '\n';
 			}
-			terminal.color('red').write(msg).reset();
+			if (options.color) {
+				terminal.color('red').write(msg).reset();
+			}
+			else {
+				terminal.write(msg);
+			}
 //			this.stream.write(msg);
 		}
 
 		warning(file, line, column, message) {
 			var msg = '# ' + 'WARNING in file ' + file + ':' + line + ':' + column + ': ' + message + '\n';
 //			this.stream.write(msg);
-			terminal.color('green').write(msg).reset();
+			if (options.color) {
+				terminal.color('green').write(msg).reset();
+			}
+			else {
+				terminal.write(msg);
+			}
 		}
 
 		info(message) {
@@ -196,8 +207,8 @@ module Webkool {
 		}
 
 		public getSide(client:boolean, server:boolean) {
-			return ((client && server) || (!client && !server)) ? 
-				(SideType.BOTH) : 
+			return ((client && server) || (!client && !server)) ?
+				(SideType.BOTH) :
 				((client) ? (SideType.CLIENT) : (SideType.SERVER));
 		}
 
@@ -218,7 +229,7 @@ module Webkool {
 				client = filename + ((filename[filename.length - 1] == '/') ? ('') : ('.')) + 'client';
 				server = filename + ((filename[filename.length - 1] == '/') ? ('') : ('.')) + 'server';
 			}
-			return ([client, server]);	
+			return ([client, server]);
 		}
 
 		public getSourceMap() {
@@ -241,7 +252,7 @@ module Webkool {
 				client = filename + ((filename[filename.length - 1] == '/') ? ('') : ('.')) + 'client';
 				server = filename + ((filename[filename.length - 1] == '/') ? ('') : ('.')) + 'server';
 			}
-			return ([client, server]);			
+			return ([client, server]);
 		}
 
 		public getOutputName(side) {
@@ -343,7 +354,7 @@ module Webkool {
 				//split chunk line by line and insert them with there real line number (source map tricks)
 				if (split == true) {
 					data.split('\n').forEach(function (itm, idx, col) {
-						
+
 						var infoTmp = {
 							line:	info.line + idx,
 							col: 	info.col,
@@ -464,7 +475,7 @@ module Webkool {
 									column: elm.info.col
 								}
 							});
-							
+
 						}
 						else {
 							map.addMapping({
@@ -512,7 +523,7 @@ module Webkool {
 			}
 			return (output);
 		}
-	}	
+	}
 
 	class	Router {
 		client;
@@ -545,7 +556,7 @@ module Webkool {
 	/*
 	**	Nodes
 	*/
-	
+
 	function 	loadExternFile(context, parser, filename, putInBuffer) {
 		var found 		= false;
 		var element 	= context;
@@ -579,7 +590,7 @@ module Webkool {
 					found = true;
 					break;
 				}
-			}		
+			}
 		}
 		else 						{ found = true; }
 		if (found === false) 		{ throw Error('file not found <' + context.attrs.href + '>'); }
@@ -623,7 +634,7 @@ module Webkool {
 			this.outputType 		= '.js';
 			parser.currentElement 	= this;
 
-			
+
 		}
 
 		public checkAttrs(attrs, location, tagName) {
@@ -831,7 +842,7 @@ module Webkool {
 				this.outputType = '.' + this.attrs.system;
 			this.preparedBuffers = new BufferManager();
 		}
-		
+
 		public prepare(parser) {
 			this.checkAttrs(this.attrs, this.location, this.name);
 			if (this.attrs.hasOwnProperty('href'))
@@ -844,7 +855,7 @@ module Webkool {
 				buffers.merge(side, this.preparedBuffers, this.location.line);
 			else {
 				var data = '';
-			
+
 				data += this.text;
 
 				buffers.write(side, this.outputType, data, null, false);
@@ -862,7 +873,7 @@ module Webkool {
 		constructor(parser, name, attrs, filename) {
 			super(parser, name, attrs, filename);
 			if (this.attrs.hasOwnProperty('system') && templateEngine.hasOwnProperty(this.attrs.system))
-				this.templateName = this.attrs.system;			
+				this.templateName = this.attrs.system;
 		}
 
 		public prepare(parser) {
@@ -909,7 +920,7 @@ module Webkool {
 
 			var templateCompiler = new templateEngine[this.templateName].parse(bufferString);
 			templateCompiler.print(streamBuff, '');	// compile and put the result in bufferTmp
-		
+
 			data += streamBuff.getContentsAsString("utf8");
 			data += '},\n';
 
@@ -956,7 +967,7 @@ module Webkool {
 			template: Template
 		};
 		elementAttrs = ['url', 'type', 'method'];
-		methodName = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'COPY', 'HEAD', 
+		methodName = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'COPY', 'HEAD',
 		'OPTIONS', 'LINK', 'UNLINK', 'PURGE', 'ALL'];
 		name = 'handler';
 
@@ -967,7 +978,7 @@ module Webkool {
 			if (attrs.method) {
 				if (this.methodName.indexOf(attrs.method) == -1)
 					logger.warning(filename, this.location.line, 0, '<' + attrs.method + '> unknow method');
-			}			
+			}
 		}
 
 		printHeader(buffers: BufferManager, side: SideType) {
@@ -997,7 +1008,7 @@ module Webkool {
 			var data = '';
 
 			data += '\n}));\n\n';
-	
+
 			buffers.write(side, this.outputType, data, null, false);
 		}
 	}
@@ -1085,11 +1096,13 @@ module Webkool {
 				.alias('c', 'client')
 				.alias('s', 'server')
 				.alias('v', 'version')
-				.boolean(['server', 'client', 'version'])
+				.alias('n', 'nocolor')
+				.boolean(['server', 'client', 'version', 'nocolor'])
 				.string('o', 'i', 'hint')
 				.describe('c', 'compile for client')
 				.describe('s', 'compile for server')
 				.describe('i', 'include directory')
+				.describe('n', 'no terminal color ouptut')
 				.describe('v', 'print the current version')
 				.describe('o', 'output basename')
 				.describe('hint', 'hint configuration')
@@ -1099,6 +1112,7 @@ module Webkool {
 
 		options.server = argv.server;
 		options.client = argv.client;
+		options.color = !argv.nocolor;
 
 		if (argv.i) {
 			if (argv.i instanceof Array)
@@ -1153,7 +1167,7 @@ module Webkool {
 	}
 
 
-	function doNextDocument() {		
+	function doNextDocument() {
 		if (options.inputs.length) {
 			doParseDocument(options.inputs.shift(), doNextDocument);
 		}
@@ -1168,13 +1182,13 @@ module Webkool {
 		parser.roots = new Roots(parser, 'roots', null, filename);
 
 		parser.filename = filename;
-		parser.elements = [parser];		
+		parser.elements = [parser];
 		parser.wait = function (element) { //element est un parser
 			this.elements.push(element);
 		}
 		parser.dequeue = function (element) {
 			var index = this.elements.indexOf(element);
-			if (index < 0) 
+			if (index < 0)
 				logger.error('DEQUEUE UNKNOWN ELEMENT');
 			this.elements.splice(index, 1);
 			if (this.elements.length == 0) {
@@ -1208,7 +1222,7 @@ module Webkool {
 				logger.error(filename, 0, 0, err.message);
 			}
 		});
-		
+
 		logger.info('parsing ' + parser.filename);
 		parser.input = fs.createReadStream(parser.filename);
 		parser.input.pipe(parser);
@@ -1278,7 +1292,7 @@ module Webkool {
 				if (buff[i].side == side && (buff[i].name == '.js' || buff[i].name == '.css')) {
 
 					var txt 				= buffers.toString(side, buff[i].name);
-					
+
 					var ext 				= buff[i].name + '.tmp';
 					var extsm  				= buff[i].name + '.map.tmp';
 
@@ -1288,7 +1302,7 @@ module Webkool {
 					var sourceMap 			= buffers.toSourceMap(side, buff[i].name, relSource);
 					var sourceMapGenerated 	= sourceMap.toString();
 
-					var outputPath 			= filename + ext; 
+					var outputPath 			= filename + ext;
 					var outputSourceMapPath = smfilename + extsm;
 
 
@@ -1296,9 +1310,9 @@ module Webkool {
 					txt += '//# sourceMappingURL=' + relPath.substr(0, relPath.length - '.tmp'.length);
 					fs.writeFile(outputSourceMapPath, sourceMapGenerated);
 					fs.writeFile(outputPath, txt);
-	
 
-					logger.info('saving in file ' + outputPath.substr(0, outputPath.length - '.tmp'.length))						
+
+					logger.info('saving in file ' + outputPath.substr(0, outputPath.length - '.tmp'.length))
 					logger.info('saving in file ' + outputSourceMapPath.substr(0, outputSourceMapPath.length - '.tmp'.length))
 
 
@@ -1316,7 +1330,7 @@ module Webkool {
 			if (errorInFile)
 				return (null);
 			return ([tmpFiles, tmpFilesSourceMap]);
-		}		
+		}
 	}
 
 	function  joinBuffers(side:SideType, buffers:BufferManager) {
@@ -1399,7 +1413,7 @@ module Webkool {
 			doParseDocument(entryFile, function (buffers:BufferManager) {
 
 				_buffers.merge(SideType.BOTH, buffers, 0);
-				
+
 				//process some operation over buffer
 				joinBuffers(SideType.BOTH, _buffers);
 
