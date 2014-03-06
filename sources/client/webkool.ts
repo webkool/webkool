@@ -110,7 +110,7 @@ class Context {
 		else {
 			handler = this.rootHandler;
 			query = this.rootQuery;
-			if (handler.contentType) {
+			if (handler) {
 				var buffer, text;
 				if (this.response) {
 					try {
@@ -138,7 +138,7 @@ class Context {
 	}
 
 	wait(handler, query) {
-		if (this.handlers.length===0||!this.rootHandler) {
+		if (!this.rootHandler && handler.contentType) {
 			this.rootHandler = handler;
 			this.rootQuery = query;
 		}
