@@ -138,7 +138,7 @@ class Context {
 	}
 
 	wait(handler, query) {
-		if (this.handlers.length==0) {
+		if (this.handlers.length===0||!this.rootHandler) {
 			this.rootHandler = handler;
 			this.rootQuery = query;
 		}
@@ -182,6 +182,11 @@ class Handler {
 
 	on_sqlResult(context, model, query, result) {
 		return result;
+	}
+
+	redirect(context, url, query) {
+		context.rootHandler = context.rootQuery = undefined;
+		application.requestWithContext(context, url, query, false);
 	}
 
 	request(context, url, query) {
