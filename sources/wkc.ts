@@ -113,20 +113,23 @@ module Webkool {
 				if (location.line != null) {
 					var path = pathm.resolve(fullPath, pathm.relative(fullPath, location.source));
 					if (itm.code[0] === 'W') {
-						logger.warning(path, location.line, location.column, itm.code + ' ' + itm.reason);feedback.warning++;
+						logger.warning(path, location.line, location.column, itm.code + ' ' + itm.reason);
+						feedback.warning++;
 					}
 					else {
-						logger.error(path, location.line, location.column, itm.code + ' ' + itm.reason);feedback.error++;
+						logger.error(path, location.line, location.column, itm.code + ' ' + itm.reason);
+						feedback.error++;
 					}
 				}
 				else {
 					var path = pathm.resolve(fullPath, pathm.relative(fullPath, sourceMap.file));
-
 					if (itm.code[0] === 'W') {
-						logger.warning(path, itm.line, itm.character, itm.code + ' ' + itm.reason);feedback.warning++;
+						logger.warning(path, itm.line, itm.character, itm.code + ' ' + itm.reason);
+						feedback.warning++;
 					}
 					else {
-						logger.error(path, itm.line, itm.character, itm.code + ' ' + itm.reason);feedback.error++;
+						logger.error(path, itm.line, itm.character, itm.code + ' ' + itm.reason);
+						feedback.error++;
 					}
 				}
 			}
@@ -161,12 +164,10 @@ module Webkool {
 			else {
 				terminal.write(msg);
 			}
-//			this.stream.write(msg);
 		}
 
 		warning(file, line, column, message) {
 			var msg = '# ' + 'WARNING in file ' + file + ':' + line + ':' + column + ': ' + message + '\n';
-//			this.stream.write(msg);
 			if (options.color) {
 				terminal.color('green').write(msg).reset();
 			}
@@ -178,7 +179,6 @@ module Webkool {
 		info(message) {
 			var msg = '# ' + message + '\n';
 			terminal.write(msg);
-//			this.stream.write(msg);
 		}
 	}
 
@@ -356,9 +356,10 @@ module Webkool {
 					data.split('\n').forEach(function (itm, idx, col) {
 
 						var infoTmp = {
-							line:	info.line + idx,
-							col: 	info.col,
-							file: 	info.file
+							line:		info.line + idx,
+							col: 		info.col,
+							file: 		info.file,
+							fullPath: 	info.fullPath
 						};
 						//filter used because expat already return 2 blank lines
 						if ((idx == 0 || idx == col.length - 1) && epurString(itm) == '')
@@ -429,7 +430,7 @@ module Webkool {
 								'line': 	line,
 								'column': 	0
 							},
-							'source': 		itm.info.file,
+							'source': 		itm.info.fullPath,
 							'original': {
 								'line': 	itm.info.line,
 								'column': 	itm.info.col
@@ -469,7 +470,7 @@ module Webkool {
 									line: 	generatedLine,
 									column: 0
 								},
-								source: 	elm.info.file,
+								source: 	elm.info.fullPath,
 								original: 	{
 									line: 	elm.info.line,
 									column: elm.info.col
@@ -525,7 +526,7 @@ module Webkool {
 		}
 	}
 
-	class	Router {
+	class Router {
 		client;
 		server;
 
@@ -543,7 +544,8 @@ module Webkool {
 				var filename = pr.resolveCheck(file, options.includes);
 				var filenamePrev = pr.resolveCheck(info.file, options.includes);
 
-				logger.warning(filename, line, column, ' method already defined in file ' + filenamePrev + ':' + info.line + ':' + info.column);
+				logger.warning(filename, line, column, 'handler "' + url + '"');
+				logger.warning(filenamePrev, info.line, info.column, 'previously defined here.');
 			}
 			sideHandler[url][method] = {
 				file:	file,
@@ -613,9 +615,10 @@ module Webkool {
 		constructor(parser, name, attrs, filename) {
 			this.line = parser.getCurrentLineNumber();
 			this.location = {
-				line:	parser.getCurrentLineNumber(),
-				col:	parser.getCurrentColumnNumber(),
-				file:	filename
+				line:		parser.getCurrentLineNumber(),
+				col:		parser.getCurrentColumnNumber(),
+				file:		filename,
+				fullPath:   parser.fullPath
 			};
 			this.start(parser, name, attrs);
 		}
@@ -723,7 +726,7 @@ module Webkool {
 				logger.info('including ' + filename);
 				parser.wait(this);
 				this.outputType = '.wk'
-				doParseDocument(filename, function (buffers) {
+				doParseDocument(this.attrs.href, function (buffers) {
 					element.preparedBuffers = buffers;
 					parser.dequeue(element);
 				});
@@ -751,17 +754,15 @@ module Webkool {
 			var middle 	= this.text;
 			var end 	= '}},\n';
 
-			var filename = pr.resolveCheck(this.location.file, options.includes);
-			filename = filename.substr(filename.lastIndexOf('/') + 1);
-
 			var newLocation = {
 				line: 	this.location.line,
 				col: 	this.location.col,
-				file: 	filename
+				file: 	this.location.file,
+				fullPath: 	this.location.fullPath
 			};
 
 			buffers.write(side, this.outputType, begin, null, false);
-			buffers.write(side, this.outputType, middle, newLocation, true);
+			buffers.write(side, this.outputType, middle, this.location, true);
 			buffers.write(side, this.outputType, end, null, false);
 		}
 
@@ -816,13 +817,11 @@ module Webkool {
 			else {
 				var data = this.text;
 
-				var filename = pr.resolveCheck(this.location.file, options.includes);
-				filename = filename.substr(filename.lastIndexOf('/') + 1);
-
 				var newLocation = {
-					line: 	this.location.line,
-					col: 	this.location.col,
-					file: 	filename
+					line: 		this.location.line,
+					col: 		this.location.col,
+					file: 		this.location.file,
+					fullPath:	this.location.fullPath
 				};
 				buffers.write(side, this.outputType, data, newLocation, true);
 			}
@@ -974,10 +973,9 @@ module Webkool {
 		constructor(parser, name, attrs, filename) {
 			super(parser, name, attrs, filename);
 
-			var filename = pr.resolveCheck(this.location.file, options.includes);
 			if (attrs.method) {
 				if (this.methodName.indexOf(attrs.method) == -1)
-					logger.warning(filename, this.location.line, 0, '<' + attrs.method + '> unknow method');
+					logger.warning(this.location.fullPath, this.location.line, 0, '<' + attrs.method + '> unknow method');
 			}
 		}
 
@@ -1177,11 +1175,12 @@ module Webkool {
 		var parser = new expat.Parser('UTF-8');
 		parser.currentElement = null;
 		parser.currentText = '';
-		filename = pr.resolveCheck(filename, options.includes);
-		addFileInSourceMapFolder(filename, options.output);
+		parser.fullPath = pr.resolveCheck(filename, options.includes);
+		addFileInSourceMapFolder(parser.fullPath, options.output);
 		parser.roots = new Roots(parser, 'roots', null, filename);
 
-		parser.filename = filename;
+		parser.filename = parser.fullPath.substr(parser.fullPath.lastIndexOf('/') + 1);;
+
 		parser.elements = [parser];
 		parser.wait = function (element) { //element est un parser
 			this.elements.push(element);
@@ -1223,8 +1222,8 @@ module Webkool {
 			}
 		});
 
-		logger.info('parsing ' + parser.filename);
-		parser.input = fs.createReadStream(parser.filename);
+		logger.info('parsing ' + parser.fullPath);
+		parser.input = fs.createReadStream(parser.fullPath);
 		parser.input.pipe(parser);
 	}
 
@@ -1306,9 +1305,15 @@ module Webkool {
 					var outputSourceMapPath = smfilename + extsm;
 
 
+					sourceMap._file 		= sourceMap._file.substr(0, sourceMap._file.length - '.tmp'.length);
+					var sources = sourceMap._sources._array;
+					for (var j = 0; j < sources.length; j++) {
+						var tmpPath = sources[j];
+						sources[j] = tmpPath.substr(tmpPath.lastIndexOf('/') + 1);
+					}
 
 					txt += '//# sourceMappingURL=' + relPath.substr(0, relPath.length - '.tmp'.length);
-					fs.writeFile(outputSourceMapPath, sourceMapGenerated);
+					fs.writeFile(outputSourceMapPath, sourceMap.toString());
 					fs.writeFile(outputPath, txt);
 
 
@@ -1333,7 +1338,7 @@ module Webkool {
 		}
 	}
 
-	function  joinBuffers(side:SideType, buffers:BufferManager) {
+	function joinBuffers(side:SideType, buffers:BufferManager) {
 		if (side == SideType.BOTH) {
 			joinBuffers(SideType.SERVER, buffers);
 			joinBuffers(SideType.CLIENT, buffers);
@@ -1361,14 +1366,14 @@ module Webkool {
 		}
 	}
 
-	function 	generateSourceMapFolder(where) {
+	function generateSourceMapFolder(where) {
 		var folder = pr.getSourceMap();
 		try {
 			fs.mkdirSync(folder);
 		} catch (ignore) {}
 	}
 
-	function 	addFileInSourceMapFolder(file, where) {
+	function addFileInSourceMapFolder(file, where) {
 		try {
 			var name = file.substr(file.lastIndexOf('/') + 1);
 			var sm = pr.getSourceMap() + name;
