@@ -112,4 +112,7 @@ open-source platform to develop client and/or server web application.
 -	fixing sourcemap path
 -	better error reporting
 
+**0.4.3**:
+
+-	adding PUT method to ApiRequest
 

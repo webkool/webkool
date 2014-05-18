@@ -41,7 +41,7 @@ module Webkool {
 	** Template and Css Engine
 	*/
 
-	var version = '0.4.1'; 						//current version
+	var version = '0.4.3'; 						//current version
 
 	var templateEngine = {
 		'square':	require('../lib/square'), 	//internal square templating module
@@ -1442,15 +1442,3 @@ module Webkool {
 }
 
 Webkool.run()
-
-
-
-
-
-
-
-
-
-
-
-

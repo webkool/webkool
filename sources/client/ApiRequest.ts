@@ -79,5 +79,14 @@ module ApiRequest {
 		client.send(application.serializeQuery(httpQuery));
 		spinningOn();
 	}
+
+	export function put(handler, context, query, url, httpQuery) {
+		context.queue(handler, query);
+		var client = getXMLHttpRequest(handler, context, query);
+		client.open('PUT', url);
+		client.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded;charset=UTF-8');
+		client.send(application.serializeQuery(httpQuery));
+		spinningOn();
+	}
 }
 
