@@ -9,7 +9,8 @@
 declare var Buffer;
 declare var application;
 declare var require;
-declare	var exports;
+declare var exports;
+declare var gHTTPServer;
 
 module httpDate {
 	var asctime = /^(Mon|Tue|Wed|Thu|Fri|Sat|Sun) (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) (..| .) (..):(..):(..) (....)$/, // Sun Nov  6 08:49:37 1994 ; ANSI C asctime() format
@@ -35,7 +36,7 @@ module httpDate {
 			if (match)
 				return new Date(Date.UTC(match[7], month[match[2]], match[3], match[4], match[5], match[6]))
 
-			console.log('# Date format was not recognize: ' + d + '\n');
+			application.log('# Date format was not recognize: ' + d + '\n');
 		}
 		return new Date()
 	}
@@ -86,7 +87,7 @@ class Context {
 
 	dequeue(handler) {
 		var index = this.handlers.indexOf(handler);
-		if (index < 0) console.log('>>>> DEQUEUE UNKNOWN HANDLER');
+		if (index < 0) application.log('>>>> DEQUEUE UNKNOWN HANDLER');
 		this.handlers.splice(index,1);
 		this.queries.splice(index,1);
 		this.synchronize();
@@ -332,21 +333,6 @@ class Application {
 		this.templates[name] = template;
 	}
 
-	getModel() {
-		if (!this.model) {
-			this.model = new Model();
-		}
-		return this.model;
-	}
-
-	handlerNotFound(context, url) {
-		console.log('Handler "' + url + '" not found!');
-	}
-
-	internalError(context, error) {
-		throw (error);
-	}
-
 	compileRoute(route) {
 		var attrs 		= [];
 		var reg_replace = /:([^\/]+)/gi;
@@ -361,6 +347,25 @@ class Application {
 			regexp: regexp,
 			fields:	attrs
 		});
+	}
+
+	getModel() {
+		if (!this.model) {
+			this.model = new Model();
+		}
+		return this.model;
+	}
+
+	handlerNotFound(context, url) {
+		application.log('Handler "' + url + '" not found!');
+	}
+
+	internalError(context, error) {
+		throw (error);
+	}
+
+	log(message) {
+		console.log(message);
 	}
 
 	matchWithDynamicHandler(method, url, query) {
@@ -506,7 +511,7 @@ class Application {
 			result = this.templates[template].on_render(undefined, model);
 		}
 		else {
-			console.log('Template "' + url + '" not found!');
+			application.log('Template "' + url + '" not found!');
 			throw 'Template "' + url + '" not found!';
 		}
 		return result;
@@ -523,6 +528,7 @@ class Application {
 }
 /*jshint -W004 */
 class Server extends Application {
+	httpServer;
 	mime = {
 		css: 'text/css',
 		eot: 'application/vnd.ms-fontobject',
@@ -554,7 +560,7 @@ class Server extends Application {
 			extension = (path.substring(dot + 1)).toLowerCase();
 			if (this.mime.hasOwnProperty(extension))
 				return this.mime[extension];
-			console.log('# mime not found!' + path + '\n');
+			application.log('# mime not found!' + path + '\n');
 		}
 		return '';
 	}
@@ -611,14 +617,27 @@ class Server extends Application {
 	}
 
 	start() {
-		var http = require('http'), server = this, httpServer;
-		httpServer = http.createServer(
-			function (request, response) {
-				server.httpRequest(request, response);
-			}
-		);
-		console.log('server listening on port: ' + this.properties.port);
-		httpServer.listen(this.properties.port);
+		if (gHTTPServer) {
+			this.httpServer = gHTTPServer;
+		}
+		else {
+			var http = require('http'), server = this;
+			this.httpServer = http.createServer(
+				function (request, response) {
+					server.httpRequest(request, response);
+				}
+			);
+			application.log('server listening on port: ' + this.properties.port);
+			this.httpServer.listen(this.properties.port);
+		}
+	}
+
+	stop() {
+		if (!gHTTPServer && this.httpServer) {
+			application.log('stop listening on port: ' + this.properties.port);
+			this.httpServer.close();
+		}
+		this.httpServer = undefined;
 	}
 
 	handlerNotFound(context, url) {
@@ -659,7 +678,7 @@ class Server extends Application {
 		context.response.writeHead(500, {'Content-Type': 'text/html', 'Content-Length': text.length});
 		context.response.end(text);
 
-		console.log('Internal error\r' + error.toString() + '\r' + error.stack);
+		application.log('Internal error\r' + error.toString() + '\r' + error.stack);
 
 	}
 }

@@ -1,6 +1,7 @@
 module MySQL {
 	'use strict';
 	declare var require;
+	declare var application;
 	var connection;
 	var MYSQL;
 
@@ -19,7 +20,7 @@ module MySQL {
 		if (err.code !== 'PROTOCOL_CONNECTION_LOST') {
 		  throw err;
 		}
-		console.log('Re-connecting lost connection: ' + err.stack);
+		application.log('Re-connecting lost connection: ' + err.stack);
 
 		connection = MYSQL.createConnection(connection.config);
 		handleDisconnect();

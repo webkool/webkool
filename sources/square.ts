@@ -374,7 +374,7 @@ module Square {
 			stream.write("try {");
 			//
 			carriageReturn(stream, 1);
-			
+
 			stream.write('var result = \'\';');
 			for (i = 0; i < c; i += 1) {
 				carriageReturn(stream, 0);
@@ -384,7 +384,7 @@ module Square {
 			stream.write('return result;');
 			carriageReturn(stream, -1);
 			//
-			
+
 			stream.write('}');
 			stream.write('catch (e) {');
 			stream.write('throw e; }');
