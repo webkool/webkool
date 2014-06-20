@@ -23,9 +23,9 @@ BIN='wkc'
 SOURCES_CLIENT_TS_INP_DIR='./sources/client/'
 SOURCES_CLIENT_TS_OUT_DIR='./lib/client/'
 
-SOURCES_CLIENT_TS[0]='MySQL'
-SOURCES_CLIENT_TS[1]='ApiRequest'
-SOURCES_CLIENT_TS[2]='webkool'
+#SOURCES_CLIENT_TS[0]='MySQL'
+#SOURCES_CLIENT_TS[1]='ApiRequest'
+#SOURCES_CLIENT_TS[2]='webkool'
 
 #-----------------------------------------------------------------------------------------
 		echo '[1] sources/client/*.ts 			===> lib/client/*.js'

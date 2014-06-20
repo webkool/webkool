@@ -750,20 +750,22 @@ module Webkool {
 		}
 
 		printBody(buffers: BufferManager, side: SideType) {
-			var begin 	= 'on_' + this.attrs.id + ': { value: function(context, model, query, result) {';
-			var middle 	= this.text;
-			var end 	= '}},\n';
+			if (this.attrs.id!='filter') {
+				var begin 	= '\t\ton_' + this.attrs.id + ': function(handler, model, query) {'; //'
+				var middle 	= this.text;
+				var end 	= '\t\t},\n';
 
-			var newLocation = {
-				line: 	this.location.line,
-				col: 	this.location.col,
-				file: 	this.location.file,
-				fullPath: 	this.location.fullPath
-			};
+				var newLocation = {
+					line: 	this.location.line,
+					col: 	this.location.col,
+					file: 	this.location.file,
+					fullPath: 	this.location.fullPath
+				};
 
-			buffers.write(side, this.outputType, begin, null, false);
-			buffers.write(side, this.outputType, middle, this.location, true);
-			buffers.write(side, this.outputType, end, null, false);
+				buffers.write(side, this.outputType, begin, null, false);
+				buffers.write(side, this.outputType, middle, this.location, true);
+				buffers.write(side, this.outputType, end, null, false);
+			}
 		}
 
 	}
@@ -888,9 +890,7 @@ module Webkool {
 					throw new Error('Embedded templates have no id!');
 				var data = '';
 
-				data += 'application.addTemplate(\"';
-				data += this.attrs.id;
-				data += '\", Object.create(Template.prototype, {\n';
+				data += 'application.addTemplate(\"' + this.attrs.id + '\", Template.template({\n';
 
 				buffers.write(side, this.outputType, data, null, false);
 			}
@@ -903,8 +903,7 @@ module Webkool {
 		printBody(buffers: BufferManager, side: SideType) {
 			var data = '';
 
-			data += 'on_render';
-			data += ': { value:\n';
+			data += '\t\ton_render : ';
 
 			var cleaned;
 
@@ -921,7 +920,6 @@ module Webkool {
 			templateCompiler.print(streamBuff, '');	// compile and put the result in bufferTmp
 
 			data += streamBuff.getContentsAsString("utf8");
-			data += '},\n';
 
 			buffers.write(side, this.outputType, data, null, false);
 		}
@@ -965,7 +963,7 @@ module Webkool {
 			bind: Bind,
 			template: Template
 		};
-		elementAttrs = ['url', 'type', 'method'];
+		elementAttrs = ['url', 'type', 'method', 'Constructor'];
 		methodName = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'COPY', 'HEAD',
 		'OPTIONS', 'LINK', 'UNLINK', 'PURGE', 'ALL'];
 		name = 'handler';
@@ -982,32 +980,35 @@ module Webkool {
 		printHeader(buffers: BufferManager, side: SideType) {
 			simApp.addHandler(side, this.attrs.method || 'ALL', this.attrs.url, this.location.file, this.location.line, this.location.col);
 
-			var data = '';
+			var data = 'application.addHandler(\"' + this.attrs.url + '\", '
+			if (this.attrs.Constructor)
+				data += this.attrs.Constructor + '.template({\n'
+			else
+				data += 'Handler.template({\n'
 
-			data += 'application.addHandler(';
-			data += '\"' + (this.attrs.method || 'ALL') + '\"';
-			data += ', \"';
-			data += this.attrs.url;
-			data += '\", Object.create(Handler.prototype, {\n';
-			data += 'url : { value: \"';
-			data += this.attrs.url;
-			data += '\"},\n';
-
-			if (this.attrs.type) {
-				data += 'contentType : { value: \"';
-				data += this.attrs.type;
-				data += '\"},\n';
-			}
+			if (this.attrs.type)
+				data += '\tcontentType : { value: \"' + this.attrs.type + '\"},\n';
+			data += '\tbehavior: Behavior.template({\n';
 
 			buffers.write(side, this.outputType, data, null, false);
 		}
 
 		printFooter(buffers: BufferManager, side: SideType) {
-			var data = '';
+			buffers.write(side, this.outputType, '\t})\n', null, false);
+			buffers.write(side, this.outputType, '\n})', null, false);
+			for (var child in this.children) {
+				var element = this.children[child];
+				if (element.name=="on" && element.attrs.id=='filter') {
+					var begin = ', function(url, query) {';
+					var middle = element.text;
+					var end 	= '}\n';
 
-			data += '\n}));\n\n';
-
-			buffers.write(side, this.outputType, data, null, false);
+					buffers.write(side, element.outputType, begin, null, false);
+					buffers.write(side, element.outputType, middle, element.location, true);
+					buffers.write(side, element.outputType, end, null, false);
+				}
+			}
+			buffers.write(side, this.outputType, ');\n', null, false);
 		}
 	}
 

@@ -363,7 +363,7 @@ module Square {
 				}
 			}
 			carriageReturn(stream, 1);
-			stream.write('function (context, model) {');
+			stream.write('function (handler, model, query) {');
 			//
 			carriageReturn(stream, 1);
 			stream.write('/*jshint -W085 */');
@@ -393,7 +393,7 @@ module Square {
 			stream.write('/*jshint +W085 */');
 			carriageReturn(stream, -1);
 			//
-			stream.write('}');
+			stream.write('},');
 			carriageReturn(stream, -1);
 		}
 	}
@@ -402,4 +402,3 @@ module Square {
 		return new Parser(buffer, path);
 	};
 }
-
