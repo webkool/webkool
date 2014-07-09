@@ -187,7 +187,7 @@ module Square {
 								if (c === 10)
 									offset += 1;
 							}
-							else if (c === 125) // }
+							else if ((c === 125) && ((buffer[offset+1]===35) || (buffer[offset+1]===91))) // }# }[
 								break;
 							else
 								offset += 1;
@@ -363,13 +363,13 @@ module Square {
 				}
 			}
 			carriageReturn(stream, 1);
-			stream.write('function (handler, model, query) {');
+			stream.write('function (handler, scope) {');
 			//
 			carriageReturn(stream, 1);
 			stream.write('/*jshint -W085 */');
 
 
-			stream.write('with (model) {');
+			stream.write('with (scope) {');
 			carriageReturn(stream, 1);
 			stream.write("try {");
 			//

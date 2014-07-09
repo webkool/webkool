@@ -751,16 +751,14 @@ module Webkool {
 
 		printBody(buffers: BufferManager, side: SideType) {
 			if (this.attrs.id!='filter') {
-				var begin 	= '\t\ton_' + this.attrs.id + ': function(handler, model, query) {'; //'
-				var middle 	= this.text;
-				var end 	= '\t\t},\n';
+				var begin, middle, end;
 
-				var newLocation = {
-					line: 	this.location.line,
-					col: 	this.location.col,
-					file: 	this.location.file,
-					fullPath: 	this.location.fullPath
-				};
+				if (this.attrs.id[0]=='/')
+					begin 	= '\t\t"' + this.attrs.id + '": function(handler, model, query) {';
+				else
+					begin 	= '\t\ton_' + this.attrs.id + ': function(handler, model, query) {'; //'
+				middle 	= this.text;
+				end 	= '\t\t},\n';
 
 				buffers.write(side, this.outputType, begin, null, false);
 				buffers.write(side, this.outputType, middle, this.location, true);
@@ -987,8 +985,8 @@ module Webkool {
 				data += 'Handler.template({\n'
 
 			if (this.attrs.type)
-				data += '\tcontentType : { value: \"' + this.attrs.type + '\"},\n';
-			data += '\tbehavior: Behavior.template({\n';
+				data += '\tcontentType : \"' + this.attrs.type + '\",\n';
+			data += '\tBehavior: Behavior.template({\n';
 
 			buffers.write(side, this.outputType, data, null, false);
 		}
