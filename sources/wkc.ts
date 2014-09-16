@@ -755,8 +755,12 @@ module Webkool {
 
 				if (this.attrs.id[0]=='/')
 					begin 	= '\t\t"' + this.attrs.id + '": function(handler, model, query) {';
-				else
-					begin 	= '\t\ton_' + this.attrs.id + ': function(handler, model, query) {'; //'
+				else {
+					if (this.attrs.id == 'render')
+						begin 	= '\t\ton_render: function(handler, scope) {'; //'
+					else
+						begin 	= '\t\ton_' + this.attrs.id + ': function(handler, model, query) {'; //'
+				}
 				middle 	= this.text;
 				end 	= '\t\t},\n';
 
