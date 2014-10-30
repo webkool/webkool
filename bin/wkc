@@ -1,6 +1,7 @@
 #! /usr/bin/env node
 /*
-Webkool parser
+    Webkool parser
+
 */
 var __extends = this.__extends || function (d, b) {
     for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
@@ -8,64 +9,53 @@ var __extends = this.__extends || function (d, b) {
     __.prototype = b.prototype;
     d.prototype = new __();
 };
-
 function printTabs(nbr) {
     var str = '';
     for (var i = 0; i < nbr; i++)
         str += '\t';
     return (str);
 }
-
 function epurString(str) {
     return str.replace(/^\s*$/, '');
 }
-
 function sanitize(str) {
     var res = '';
-
     str.split('\n').forEach(function (itm, idx, col) {
         if (!((idx == 0 || idx == col.length - 1) && epurString(itm) == ''))
             res += itm + '\n';
     });
     return (res);
 }
-
 var Webkool;
 (function (Webkool) {
     'use strict';
-
     /*
     ** Template and Css Engine
     */
-    var version = '0.4.3';
-
+    var version = '0.4.3'; //current version
     var templateEngine = {
         'square': require('../lib/square'),
-        'mustache': require('../lib/mustache')
+        'mustache': require('../lib/mustache') //internal mustache(hogan.js) templating module
     };
-
     var styleSheetEngine = {
         'css': '',
         'less': require('../lib/less'),
-        'sass': require('../lib/sass')
+        'sass': require('../lib/sass') //internal sass module
     };
-
     /*
     **	require
     */
     var terminal = require('color-terminal');
-    var expat = require('node-expat');
-    var sm = require('source-map');
-    var sbuff = require('stream-buffers');
-    var jshint = require('jshint').JSHINT;
-    var fs = require('fs');
+    var expat = require('node-expat'); //parser
+    var sm = require('source-map'); //source mapping
+    var sbuff = require('stream-buffers'); //utils buffers
+    var jshint = require('jshint').JSHINT; //output syntax validation
+    var fs = require('fs'); //filesystem access
     var pathm = require('path');
     var async = require('async');
     var stream = require('stream');
-
     var simApp;
     var logger;
-
     var outputJS, outputCSS, pr, options = {
         client: false,
         server: false,
@@ -76,7 +66,6 @@ var Webkool;
         output: '',
         jshint: ''
     };
-
     var SideType;
     (function (SideType) {
         SideType[SideType["BOTH"] = 0] = "BOTH";
@@ -84,15 +73,12 @@ var Webkool;
         SideType[SideType["CLIENT"] = 2] = "CLIENT";
     })(SideType || (SideType = {}));
     ;
-
     function printHintErrors(errors, sourceMap, output) {
         var smc = new sm.SourceMapConsumer(sourceMap);
-
         var feedback = {
             error: 0,
             warning: 0
         };
-
         errors.forEach(function (itm) {
             if (itm == null)
                 logger.error('to many Errors, please fix your code');
@@ -103,22 +89,24 @@ var Webkool;
                 });
                 var dirname = pathm.dirname(output);
                 var fullPath = pathm.resolve(pathm.dirname(output));
-
                 if (location.line != null) {
                     var path = pathm.resolve(fullPath, pathm.relative(fullPath, location.source));
                     if (itm.code[0] === 'W') {
                         logger.warning(path, location.line, location.column, itm.code + ' ' + itm.reason);
                         feedback.warning++;
-                    } else {
+                    }
+                    else {
                         logger.error(path, location.line, location.column, itm.code + ' ' + itm.reason);
                         feedback.error++;
                     }
-                } else {
+                }
+                else {
                     var path = pathm.resolve(fullPath, pathm.relative(fullPath, sourceMap.file));
                     if (itm.code[0] === 'W') {
                         logger.warning(path, itm.line, itm.character, itm.code + ' ' + itm.reason);
                         feedback.warning++;
-                    } else {
+                    }
+                    else {
                         logger.error(path, itm.line, itm.character, itm.code + ' ' + itm.reason);
                         feedback.error++;
                     }
@@ -127,7 +115,6 @@ var Webkool;
         });
         return (feedback.error === 0);
     }
-
     /*
     **	Logger
     */
@@ -137,7 +124,6 @@ var Webkool;
         }
         Logger.prototype.error = function (file, line, column, message) {
             var msg;
-
             if (typeof line === 'undefined' && typeof column === 'undefined' && typeof message === 'undefined')
                 msg = '# ERROR in file ' + file + '\n';
             else {
@@ -145,27 +131,26 @@ var Webkool;
             }
             if (options.color) {
                 terminal.color('red').write(msg).reset();
-            } else {
+            }
+            else {
                 terminal.write(msg);
             }
         };
-
         Logger.prototype.warning = function (file, line, column, message) {
             var msg = '# ' + 'WARNING in file ' + file + ':' + line + ':' + column + ': ' + message + '\n';
             if (options.color) {
                 terminal.color('green').write(msg).reset();
-            } else {
+            }
+            else {
                 terminal.write(msg);
             }
         };
-
         Logger.prototype.info = function (message) {
             var msg = '# ' + message + '\n';
             terminal.write(msg);
         };
         return Logger;
     })();
-
     /*
     **	BufferManager
     */
@@ -180,20 +165,16 @@ var Webkool;
         PathRes.prototype.getRoot = function () {
             return (this.root);
         };
-
         PathRes.prototype.getSide = function (client, server) {
             return ((client && server) || (!client && !server)) ? (0 /* BOTH */) : ((client) ? (2 /* CLIENT */) : (1 /* SERVER */));
         };
-
         PathRes.prototype.getFile = function () {
             return (this.file);
         };
-
         PathRes.prototype.getOutputFile = function (side) {
             var filename = this.file;
             var client = null;
             var server = null;
-
             if (side == 2 /* CLIENT */)
                 client = filename + ((filename[filename.length - 1] == '/') ? ('client') : (''));
             if (side == 1 /* SERVER */)
@@ -204,19 +185,16 @@ var Webkool;
             }
             return ([client, server]);
         };
-
         PathRes.prototype.getSourceMap = function () {
             return (this.sm);
         };
         PathRes.prototype.getCurrentFolder = function () {
             return (this.currentFolder);
         };
-
         PathRes.prototype.getSourceMapName = function (side) {
             var filename = this.sm + this.file;
             var client = null;
             var server = null;
-
             if (side == 2 /* CLIENT */)
                 client = filename + ((filename[filename.length - 1] == '/') ? ('client') : (''));
             if (side == 1 /* SERVER */)
@@ -227,12 +205,10 @@ var Webkool;
             }
             return ([client, server]);
         };
-
         PathRes.prototype.getOutputName = function (side) {
             var filename = this.root + this.file;
             var client = null;
             var server = null;
-
             if (side == 2 /* CLIENT */)
                 client = filename + ((filename[filename.length - 1] == '/') ? ('client') : (''));
             if (side == 1 /* SERVER */)
@@ -243,7 +219,6 @@ var Webkool;
             }
             return ([client, server]);
         };
-
         PathRes.prototype.resolve = function (that, path) {
             var res = pathm.resolve(that + path);
             if (path.length === 0)
@@ -252,7 +227,6 @@ var Webkool;
                 return (res + '/');
             return (res);
         };
-
         PathRes.prototype.resolveCheck = function (file, inc) {
             var np = '';
             for (var i = 0; i < inc.length; i++) {
@@ -262,11 +236,9 @@ var Webkool;
             }
             return (null);
         };
-
         PathRes.prototype.getRelative = function (p1, p2) {
             return (pathm.relative(p1, p2));
         };
-
         PathRes.prototype.getDirFromPath = function (path) {
             var res = pathm.resolve(path) + (path == '' ? '/' : '');
             if (path.length > 0 && res[res.length - 1] != '/' && path[path.length - 1] == '/')
@@ -275,7 +247,6 @@ var Webkool;
                 res = res.substr(0, res.lastIndexOf('/')) + '/';
             return (res);
         };
-
         PathRes.prototype.getFileFromPath = function (path) {
             var file = '';
             var res = pathm.resolve(path) + (path == '' ? '/' : '');
@@ -285,7 +256,6 @@ var Webkool;
         };
         return PathRes;
     })();
-
     var BufferManager = (function () {
         function BufferManager() {
             this.buffers = [];
@@ -294,10 +264,9 @@ var Webkool;
             this.buffers.push({
                 'name': name,
                 'side': neededSide,
-                'data': []
+                'data': [],
             });
         };
-
         BufferManager.prototype.get = function (side, name, create) {
             for (var i = 0; i < this.buffers.length; i++) {
                 if (this.buffers[i].name == name && this.buffers[i].side == side)
@@ -309,15 +278,14 @@ var Webkool;
             }
             return (undefined);
         };
-
         BufferManager.prototype.write = function (side, name, data, info, split) {
             if (side == 0 /* BOTH */) {
                 this.write(1 /* SERVER */, name, data, info, split);
                 this.write(2 /* CLIENT */, name, data, info, split);
-            } else {
+            }
+            else {
                 // if info == null, the chunk will be not add to the source map
                 var buff = this.get(side, name, true);
-
                 //split chunk line by line and insert them with there real line number (source map tricks)
                 if (split == true) {
                     data.split('\n').forEach(function (itm, idx, col) {
@@ -327,17 +295,16 @@ var Webkool;
                             file: info.file,
                             fullPath: info.fullPath
                         };
-
                         //filter used because expat already return 2 blank lines
                         if ((idx == 0 || idx == col.length - 1) && epurString(itm) == '')
                             infoTmp = null;
-
                         buff.data.push({
                             data: itm + '\n',
                             info: infoTmp
                         });
                     });
-                } else {
+                }
+                else {
                     buff.data.push({
                         data: data,
                         info: info
@@ -345,19 +312,15 @@ var Webkool;
                 }
             }
         };
-
         BufferManager.prototype.getBuffers = function () {
             return (this.buffers);
         };
-
         BufferManager.prototype.exec = function (side, name, callback) {
             callback(this.get(side, name, false));
         };
-
         BufferManager.prototype.copy = function (other) {
             this.buffers = other.getBuffers();
         };
-
         BufferManager.prototype.insert = function (side, name, elm, info) {
             var buff = this.get(side, name, true);
             buff.data.push({
@@ -365,14 +328,13 @@ var Webkool;
                 info: info
             });
         };
-
         BufferManager.prototype.merge = function (side, other, info) {
             if (side == 0 /* BOTH */) {
                 this.merge(1 /* SERVER */, other, info.line);
                 this.merge(2 /* CLIENT */, other, info.line);
-            } else {
+            }
+            else {
                 var buff = other.getBuffers();
-
                 for (var i = 0; i < buff.length; i++) {
                     if (buff[i].side == side || buff[i].side == 0 /* BOTH */) {
                         this.insert(side, buff[i].name, buff[i].data, info);
@@ -380,7 +342,6 @@ var Webkool;
                 }
             }
         };
-
         BufferManager.prototype.profoundToSourceMap = function (map, line, elm) {
             for (var i = 0; i < elm.length; i++) {
                 var itm = elm[i];
@@ -399,7 +360,8 @@ var Webkool;
                                 'column': itm.info.col
                             }
                         });
-                    } else {
+                    }
+                    else {
                         map.addMapping({
                             generated: {
                                 line: line,
@@ -412,18 +374,17 @@ var Webkool;
             }
             return (line);
         };
-
         BufferManager.prototype.toSourceMap = function (side, name, filename) {
             var map = new sm.SourceMapGenerator({ file: filename });
             var generatedLine = 1;
             var buff = this.get(side, name, false);
-
             if (typeof buff !== 'undefined') {
                 for (var i = 0; i < buff.data.length; i++) {
                     var elm = buff.data[i];
                     if (elm.data instanceof Array) {
                         generatedLine = this.profoundToSourceMap(map, generatedLine, elm.data);
-                    } else {
+                    }
+                    else {
                         if (elm.info != null) {
                             map.addMapping({
                                 generated: {
@@ -436,7 +397,8 @@ var Webkool;
                                     column: elm.info.col
                                 }
                             });
-                        } else {
+                        }
+                        else {
                             map.addMapping({
                                 generated: {
                                     line: generatedLine,
@@ -450,11 +412,9 @@ var Webkool;
             }
             return (map);
         };
-
         //output generation
         BufferManager.prototype.profoundToString = function (data) {
             var output = '';
-
             var _this = this;
             data.forEach(function (elm) {
                 if (elm.data instanceof Array)
@@ -464,12 +424,10 @@ var Webkool;
             });
             return (output);
         };
-
         BufferManager.prototype.toString = function (side, name) {
             var output = '';
             var buff = this.get(side, name, false);
             var _this = this;
-
             if (typeof buff !== 'undefined') {
                 buff.data.forEach(function (elm) {
                     if (elm.data instanceof Array)
@@ -482,23 +440,44 @@ var Webkool;
         };
         return BufferManager;
     })();
-
     var Router = (function () {
         function Router() {
+            this.both = {};
             this.client = {};
             this.server = {};
         }
         Router.prototype.addHandler = function (side, method, url, file, line, column) {
-            var sideHandler = side == 2 /* CLIENT */ ? this.client : this.server;
+            var sideHandler;
+            switch (side) {
+                case 2 /* CLIENT */:
+                    sideHandler = this.client;
+                    break;
+                case 1 /* SERVER */:
+                    sideHandler = this.server;
+                    break;
+                default:
+                    sideHandler = this.both;
+                    break;
+            }
             if (!sideHandler.hasOwnProperty(url))
                 sideHandler[url] = {};
             if (sideHandler[url].hasOwnProperty(method)) {
                 var info = sideHandler[url][method];
                 var filename = pr.resolveCheck(file, options.includes);
                 var filenamePrev = pr.resolveCheck(info.file, options.includes);
-
                 logger.warning(filename, line, column, 'handler "' + url + '"');
                 logger.warning(filenamePrev, info.line, info.column, 'previously defined here.');
+            }
+            if (sideHandler != this.both) {
+                if (!this.both.hasOwnProperty(url))
+                    this.both[url] = {};
+                if (this.both[url].hasOwnProperty(method)) {
+                    var info = this.both[url][method];
+                    var filename = pr.resolveCheck(file, options.includes);
+                    var filenamePrev = pr.resolveCheck(info.file, options.includes);
+                    logger.warning(filename, line, column, 'handler "' + url + '"');
+                    logger.warning(filenamePrev, info.line, info.column, 'previously defined here.');
+                }
             }
             sideHandler[url][method] = {
                 file: file,
@@ -508,7 +487,6 @@ var Webkool;
         };
         return Router;
     })();
-
     /*
     **	Nodes
     */
@@ -518,7 +496,7 @@ var Webkool;
         var extension = '.' + filename.split('.').pop();
         var content = '';
         var readIncludeFile = function (parser, element, filename, extension) {
-            try  {
+            try {
                 var res = '';
                 if (putInBuffer == true)
                     res += '/* include ' + filename + ' */\n';
@@ -529,14 +507,13 @@ var Webkool;
                     content = res;
                 parser.dequeue(element);
                 return (true);
-            } catch (e) {
+            }
+            catch (e) {
                 return (false);
             }
         };
-
         parser.wait(context);
         context.outputType = extension;
-
         if (!readIncludeFile(parser, element, filename, extension)) {
             for (var i = 0; i < options.includes.length; i++) {
                 var newName = options.includes[i] + context.attrs.href;
@@ -545,7 +522,8 @@ var Webkool;
                     break;
                 }
             }
-        } else {
+        }
+        else {
             found = true;
         }
         if (found === false) {
@@ -555,7 +533,6 @@ var Webkool;
             return (content);
         }
     }
-
     var Element = (function () {
         function Element(parser, name, attrs, filename) {
             this.line = parser.getCurrentLineNumber();
@@ -572,7 +549,6 @@ var Webkool;
                 parser.currentElement.processText(parser);
                 parser.currentElement.children.push(this);
             }
-
             this.parent = parser.currentElement;
             this.children = [];
             this.name = name;
@@ -581,7 +557,6 @@ var Webkool;
             this.outputType = '.js';
             parser.currentElement = this;
         };
-
         Element.prototype.checkAttrs = function (attrs, location, tagName) {
             for (var name in attrs) {
                 if (this.elementAttrs.indexOf(name) == -1) {
@@ -589,59 +564,48 @@ var Webkool;
                 }
             }
         };
-
         Element.prototype.stop = function (parser, name) {
             this.processText(parser);
             parser.currentElement = this.parent;
         };
-
         Element.prototype.prepare = function (parser) {
             this.checkAttrs(this.attrs, this.location, this.name);
             this.children.forEach(function (item) {
                 item.prepare(parser);
             });
         };
-
         Element.prototype.processElement = function (parser, name, attrs) {
             if (this.elementRules.hasOwnProperty(name)) {
                 return new (this.elementRules[name])(parser, name, attrs, this.location.file);
             }
             parser.error('Element not found <' + name + '>');
         };
-
         Element.prototype.processText = function (parser) {
             this.text += parser.currentText;
             parser.currentText = '';
         };
-
         Element.prototype.print = function (buffers, side) {
             this.printHeader(buffers, side);
             this.printBody(buffers, side);
             this.printFooter(buffers, side);
         };
-
         Element.prototype.printHeader = function (buffers, side) {
         };
-
         Element.prototype.printBody = function (buffers, side) {
             this.children.forEach(function (item) {
                 item.print(buffers, side);
             });
         };
-
         Element.prototype.printFooter = function (buffers, side) {
         };
-
         Element.prototype.getLocation = function (offsetLine, offsetColumn) {
             var location = this.location;
-
             location.line += offsetLine;
             location.col += offsetColumn;
             return (location);
         };
         return Element;
     })();
-
     var Include = (function (_super) {
         __extends(Include, _super);
         function Include(parser, name, attrs, filename) {
@@ -656,7 +620,6 @@ var Webkool;
             this.checkAttrs(this.attrs, this.location, this.name);
             var element = this;
             var filename = pr.resolveCheck(this.attrs.href, options.includes);
-
             var extension = pathm.extname(filename);
             if (filename !== null) {
                 logger.info('including ' + filename);
@@ -666,16 +629,15 @@ var Webkool;
                     element.preparedBuffers = buffers;
                     parser.dequeue(element);
                 });
-            } else
+            }
+            else
                 logger.error(this.location.file, this.location.line, this.location.col, '<' + this.attrs.href + '> file not found');
         };
-
         Include.prototype.printBody = function (buffers, side) {
             buffers.merge(side, this.preparedBuffers, this.location.line);
         };
         return Include;
     })(Element);
-
     var On = (function (_super) {
         __extends(On, _super);
         function On(parser, name, attrs, filename) {
@@ -687,7 +649,6 @@ var Webkool;
         On.prototype.printBody = function (buffers, side) {
             if (this.attrs.id != 'filter') {
                 var begin, middle, end;
-
                 if (this.attrs.id[0] == '/')
                     begin = '\t\t"' + this.attrs.id + '": function(handler, model, query) {';
                 else {
@@ -698,7 +659,6 @@ var Webkool;
                 }
                 middle = this.text;
                 end = '\t\t},\n';
-
                 buffers.write(side, this.outputType, begin, null, false);
                 buffers.write(side, this.outputType, middle, this.location, true);
                 buffers.write(side, this.outputType, end, null, false);
@@ -706,7 +666,6 @@ var Webkool;
         };
         return On;
     })(Element);
-
     var Property = (function (_super) {
         __extends(Property, _super);
         function Property(parser, name, attrs, filename) {
@@ -718,20 +677,16 @@ var Webkool;
         Property.prototype.printBody = function (buffers, side) {
             if (!this.attrs.hasOwnProperty('id'))
                 throw new Error('properties must have an id!');
-
             var data = '';
-
             data += 'application.addProperty(\"';
             data += this.attrs.id;
             data += '\", \"';
             data += this.text;
             data += '\");\n';
-
             buffers.write(side, this.outputType, data, null, false);
         };
         return Property;
     })(Element);
-
     var Script = (function (_super) {
         __extends(Script, _super);
         function Script(parser, name, attrs, filename) {
@@ -747,13 +702,11 @@ var Webkool;
                 loadExternFile(this, parser, this.attrs.href, true);
             this.outputType = '.js';
         };
-
         Script.prototype.printBody = function (buffers, side) {
             if (this.attrs.hasOwnProperty('href'))
                 buffers.merge(side, this.preparedBuffers, this.location.line);
             else {
                 var data = this.text;
-
                 var newLocation = {
                     line: this.location.line,
                     col: this.location.col,
@@ -765,7 +718,6 @@ var Webkool;
         };
         return Script;
     })(Element);
-
     var Stylesheet = (function (_super) {
         __extends(Stylesheet, _super);
         function Stylesheet(parser, name, attrs, filename) {
@@ -783,21 +735,17 @@ var Webkool;
             if (this.attrs.hasOwnProperty('href'))
                 loadExternFile(this, parser, this.attrs.href, true);
         };
-
         Stylesheet.prototype.printBody = function (buffers, side) {
             if (this.attrs.hasOwnProperty('href'))
                 buffers.merge(side, this.preparedBuffers, this.location.line);
             else {
                 var data = '';
-
                 data += this.text;
-
                 buffers.write(side, this.outputType, data, null, false);
             }
         };
         return Stylesheet;
     })(Element);
-
     var Template = (function (_super) {
         __extends(Template, _super);
         function Template(parser, name, attrs, filename) {
@@ -815,57 +763,44 @@ var Webkool;
                 this.templateContent = loadExternFile(this, parser, this.attrs.href, false);
             this.outputType = '.js';
         };
-
         Template.prototype.printHeader = function (buffers, side) {
             if (this.attrs.hasOwnProperty('id')) {
                 if (Handler.prototype.isPrototypeOf(this.parent))
                     throw new Error('Embedded templates have no id!');
                 var data = '';
-
                 data += 'application.addTemplate(\"' + this.attrs.id + '\", Template.template({\n';
-
                 buffers.write(side, this.outputType, data, null, false);
-            } else {
+            }
+            else {
                 if (!Handler.prototype.isPrototypeOf(this.parent))
                     throw new Error('Stand-alone templates must have an id!');
             }
         };
-
         Template.prototype.printBody = function (buffers, side) {
             var data = '';
-
             data += '\t\ton_render : ';
-
             var cleaned;
-
             if (this.attrs.hasOwnProperty('href'))
                 cleaned = this.templateContent.replace(/\n/g, '\\n').replace(/\t/g, '\\t');
             else
                 cleaned = this.text.replace(/\n/g, '\\n').replace(/\t/g, '\\t');
             cleaned = cleaned.replace(/\"/g, '\\\"');
-
             var bufferString = new Buffer(cleaned);
             var streamBuff = new sbuff.WritableStreamBuffer();
-
             var templateCompiler = new templateEngine[this.templateName].parse(bufferString);
             templateCompiler.print(streamBuff, ''); // compile and put the result in bufferTmp
-
             data += streamBuff.getContentsAsString("utf8");
-
             buffers.write(side, this.outputType, data, null, false);
         };
-
         Template.prototype.printFooter = function (buffers, side) {
             var data = '';
             if (this.attrs.hasOwnProperty('id')) {
                 data += '\n}));\n\n';
-
                 buffers.write(side, this.outputType, data, null, false);
             }
         };
         return Template;
     })(Element);
-
     var Client = (function (_super) {
         __extends(Client, _super);
         function Client(parser, name, attrs, filename) {
@@ -888,7 +823,6 @@ var Webkool;
         };
         return Client;
     })(Element);
-
     var Handler = (function (_super) {
         __extends(Handler, _super);
         function Handler(parser, name, attrs, filename) {
@@ -899,11 +833,8 @@ var Webkool;
                 template: Template
             };
             this.elementAttrs = ['url', 'type', 'method', 'Constructor'];
-            this.methodName = [
-                'GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'COPY', 'HEAD',
-                'OPTIONS', 'LINK', 'UNLINK', 'PURGE', 'ALL'];
+            this.methodName = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'COPY', 'HEAD', 'OPTIONS', 'LINK', 'UNLINK', 'PURGE', 'ALL'];
             this.name = 'handler';
-
             if (attrs.method) {
                 if (this.methodName.indexOf(attrs.method) == -1)
                     logger.warning(this.location.fullPath, this.location.line, 0, '<' + attrs.method + '> unknow method');
@@ -911,20 +842,16 @@ var Webkool;
         }
         Handler.prototype.printHeader = function (buffers, side) {
             simApp.addHandler(side, this.attrs.method || 'ALL', this.attrs.url, this.location.file, this.location.line, this.location.col);
-
             var data = 'application.addHandler(\"' + this.attrs.url + '\", ';
             if (this.attrs.Constructor)
                 data += this.attrs.Constructor + '.template({\n';
             else
                 data += 'Handler.template({\n';
-
             if (this.attrs.type)
                 data += '\tcontentType : \"' + this.attrs.type + '\",\n';
             data += '\tBehavior: Behavior.template({\n';
-
             buffers.write(side, this.outputType, data, null, false);
         };
-
         Handler.prototype.printFooter = function (buffers, side) {
             buffers.write(side, this.outputType, '\t})\n', null, false);
             buffers.write(side, this.outputType, '\n})', null, false);
@@ -934,7 +861,6 @@ var Webkool;
                     var begin = ', function(url, query) {';
                     var middle = element.text;
                     var end = '}\n';
-
                     buffers.write(side, element.outputType, begin, null, false);
                     buffers.write(side, element.outputType, middle, element.location, true);
                     buffers.write(side, element.outputType, end, null, false);
@@ -944,7 +870,6 @@ var Webkool;
         };
         return Handler;
     })(Element);
-
     var Bind = (function (_super) {
         __extends(Bind, _super);
         function Bind(parser, name, attrs, filename) {
@@ -955,14 +880,11 @@ var Webkool;
         }
         Bind.prototype.printBody = function (buffers, side) {
             var data = '';
-
             data += 'application.addObserver(' + this.attrs.data + ', ' + this.attrs.with + ');\n';
-
             buffers.write(side, this.outputType, data, null, false);
         };
         return Bind;
     })(Element);
-
     var Server = (function (_super) {
         __extends(Server, _super);
         function Server(parser, name, attrs, filename) {
@@ -974,7 +896,7 @@ var Webkool;
                 property: Property,
                 script: Script,
                 stylesheet: Stylesheet,
-                template: Template
+                template: Template,
             };
             this.elementAttrs = [];
             this.name = 'server';
@@ -985,7 +907,6 @@ var Webkool;
         };
         return Server;
     })(Element);
-
     var Application = (function (_super) {
         __extends(Application, _super);
         function Application(parser, name, attrs, filename) {
@@ -998,14 +919,13 @@ var Webkool;
                 server: Server,
                 script: Script,
                 stylesheet: Stylesheet,
-                template: Template
+                template: Template,
             };
             this.elementAttrs = ['xmlns'];
             this.name = 'application';
         }
         return Application;
     })(Element);
-
     var Roots = (function (_super) {
         __extends(Roots, _super);
         function Roots(parser, name, attrs, filename) {
@@ -1018,17 +938,14 @@ var Webkool;
         }
         return Roots;
     })(Element);
-
     /*
     ** Parse Arguments
     */
     function doParseArguments(options) {
         var argv = require('optimist').alias('c', 'client').alias('s', 'server').alias('v', 'version').alias('n', 'nocolor').boolean(['server', 'client', 'version', 'nocolor']).string('o', 'i', 'hint').describe('c', 'compile for client').describe('s', 'compile for server').describe('i', 'include directory').describe('n', 'no terminal color ouptut').describe('v', 'print the current version').describe('o', 'output basename').describe('hint', 'hint configuration').usage('$0' + ' version ' + version).demand('_').argv;
-
         options.server = argv.server;
         options.client = argv.client;
         options.color = !argv.nocolor;
-
         if (argv.i) {
             if (argv.i instanceof Array)
                 argv.i.forEach(function (elm) {
@@ -1042,54 +959,52 @@ var Webkool;
                 options.jshint = loadJsHintFile(argv.hint[0]);
             else
                 options.jshint = loadJsHintFile(argv.hint);
-        } else
+        }
+        else
             options.jshint = loadJsHintFile(null);
         if (argv.v) {
             logger.info('version: ' + version);
         }
         if (argv.o)
             options.output = (argv.o instanceof Array) ? (argv.o.splice(-1)) : (argv.o);
-
         argv._.forEach(function (elm) {
             options.inputs.push(elm);
         });
     }
-
     /*
     ** parsing entry point and utils
     */
     function loadJsHintFile(file) {
         var _logger = logger;
         var data = '';
-        try  {
+        try {
             if (file == null) {
                 throw Error('default file');
             }
             data = fs.readFileSync(file, 'utf-8');
-        } catch (err) {
+        }
+        catch (err) {
             _logger.info('using default jshint config file');
-            try  {
+            try {
                 data = fs.readFileSync(__dirname + '/../sources/templates/jshint.json', 'utf-8');
-            } catch (e) {
+            }
+            catch (e) {
                 data = '';
             }
         }
         return (JSON.parse(data));
     }
-
     function hint(chunk, sourceMap, output) {
         if (jshint(chunk, options.jshint) == false) {
             return (printHintErrors(jshint.data().errors, sourceMap, output));
         }
         return (true);
     }
-
     function doNextDocument() {
         if (options.inputs.length) {
             doParseDocument(options.inputs.shift(), doNextDocument);
         }
     }
-
     function doParseDocument(filename, callback) {
         var parser = new expat.Parser('UTF-8');
         parser.currentElement = null;
@@ -1097,10 +1012,8 @@ var Webkool;
         parser.fullPath = pr.resolveCheck(filename, options.includes);
         addFileInSourceMapFolder(parser.fullPath, options.output);
         parser.roots = new Roots(parser, 'roots', null, filename);
-
         parser.filename = parser.fullPath.substr(parser.fullPath.lastIndexOf('/') + 1);
         ;
-
         parser.elements = [parser];
         parser.wait = function (element) {
             this.elements.push(element);
@@ -1113,7 +1026,6 @@ var Webkool;
             if (this.elements.length == 0) {
                 var buffers = new BufferManager();
                 this.currentElement.print(buffers, 0 /* BOTH */);
-
                 if (callback)
                     callback(buffers);
             }
@@ -1134,40 +1046,36 @@ var Webkool;
             this.currentText += s;
         });
         parser.addListener('end', function () {
-            try  {
+            try {
                 this.currentElement.prepare(parser);
                 parser.dequeue(parser);
-            } catch (err) {
+            }
+            catch (err) {
                 logger.error(filename, 0, 0, err.message);
             }
         });
-
         logger.info('parsing ' + parser.fullPath);
         parser.input = fs.createReadStream(parser.fullPath);
         parser.input.pipe(parser);
     }
-
     function checkWebKoolWkFileExistence(filename) {
-        try  {
+        try {
             var path = fs.realpathSync(filename);
-        } catch (e) {
+        }
+        catch (e) {
             var data = fs.readFileSync(__dirname + '/../sources/templates/webkool.wk');
             fs.writeFileSync(filename, data);
         }
     }
-
     function getDataFromSourceMap(sourceMap, side, type) {
         if (typeof sourceMap[type] === 'undefined' || typeof sourceMap[type][side] === 'undefined')
             return ('');
         return (JSON.stringify(sourceMap[type][side].toStringWithSourceMap({ file: ['webkool.wk'] }).map));
     }
-
     function getOutputName(side) {
         var filename = pathm.resolve(options.output);
-
         if (options.output[options.output.length - 1] == '/')
             filename += '/';
-
         if (side == 2 /* CLIENT */) {
             var client = filename + ((filename[filename.length - 1] == '/') ? ('client') : (''));
             return ([client, null]);
@@ -1180,11 +1088,11 @@ var Webkool;
             var client = filename + ((filename[filename.length - 1] == '/') ? ('') : ('.')) + 'client';
             var server = filename + ((filename[filename.length - 1] == '/') ? ('') : ('.')) + 'server';
             return ([client, server]);
-        } else {
+        }
+        else {
             return (null);
         }
     }
-
     function createFilesForSide(side, buffers, filename, smfilename) {
         if (side == 0 /* BOTH */) {
             var rs = createFilesForSide(1 /* SERVER */, buffers, filename[1], smfilename[1]);
@@ -1193,7 +1101,8 @@ var Webkool;
                 return ([rs[0].concat(rc[0]), rs[1].concat(rc[1])]);
             }
             return (null);
-        } else {
+        }
+        else {
             if (Array.isArray(filename))
                 filename = (side == 2 /* CLIENT */) ? (filename[0]) : (filename[1]);
             if (Array.isArray(smfilename))
@@ -1205,39 +1114,32 @@ var Webkool;
             for (var i = 0; i < buff.length; i++) {
                 if (buff[i].side == side && (buff[i].name == '.js' || buff[i].name == '.css')) {
                     var txt = buffers.toString(side, buff[i].name);
-
                     var ext = buff[i].name + '.tmp';
                     var extsm = buff[i].name + '.map.tmp';
-
                     var relSource = pr.getRelative(pr.getSourceMap(), pr.getRoot()) + '/' + filename.substr(filename.lastIndexOf('/') + 1) + ext;
                     var relPath = pr.getRelative(pr.getRoot(), pr.getSourceMap()) + '/' + filename.substr(filename.lastIndexOf('/') + 1) + extsm;
-
                     var sourceMap = buffers.toSourceMap(side, buff[i].name, relSource);
                     var sourceMapGenerated = sourceMap.toString();
-
                     var outputPath = filename + ext;
                     var outputSourceMapPath = smfilename + extsm;
-
                     sourceMap._file = sourceMap._file.substr(0, sourceMap._file.length - '.tmp'.length);
                     var sources = sourceMap._sources._array;
                     for (var j = 0; j < sources.length; j++) {
                         var tmpPath = sources[j];
                         sources[j] = tmpPath.substr(tmpPath.lastIndexOf('/') + 1);
                     }
-
                     txt += '//# sourceMappingURL=' + relPath.substr(0, relPath.length - '.tmp'.length);
                     fs.writeFile(outputSourceMapPath, sourceMap.toString());
                     fs.writeFile(outputPath, txt);
-
                     logger.info('saving in file ' + outputPath.substr(0, outputPath.length - '.tmp'.length));
                     logger.info('saving in file ' + outputSourceMapPath.substr(0, outputSourceMapPath.length - '.tmp'.length));
-
                     if (buff[i].name == '.js') {
                         if (hint(txt, JSON.parse(sourceMapGenerated), filename))
                             tmpFiles.push(outputPath);
                         else
                             errorInFile = true;
-                    } else
+                    }
+                    else
                         tmpFiles.push(outputPath);
                     tmpFilesSourceMap.push(outputSourceMapPath);
                 }
@@ -1247,12 +1149,12 @@ var Webkool;
             return ([tmpFiles, tmpFilesSourceMap]);
         }
     }
-
     function joinBuffers(side, buffers) {
         if (side == 0 /* BOTH */) {
             joinBuffers(1 /* SERVER */, buffers);
             joinBuffers(2 /* CLIENT */, buffers);
-        } else {
+        }
+        else {
             for (var eng in styleSheetEngine) {
                 if (eng != 'css') {
                     var streamBuff = new sbuff.WritableStreamBuffer();
@@ -1265,7 +1167,6 @@ var Webkool;
                     }
                 }
             }
-
             //append application start at the end of .js
             if (side == 1 /* SERVER */) {
                 var line = buffers.get(1 /* SERVER */, '.js', true).data.length;
@@ -1273,28 +1174,26 @@ var Webkool;
             }
         }
     }
-
     function generateSourceMapFolder(where) {
         var folder = pr.getSourceMap();
-        try  {
+        try {
             fs.mkdirSync(folder);
-        } catch (ignore) {
+        }
+        catch (ignore) {
         }
     }
-
     function addFileInSourceMapFolder(file, where) {
-        try  {
+        try {
             var name = file.substr(file.lastIndexOf('/') + 1);
             var sm = pr.getSourceMap() + name;
             var fin = fs.createReadStream(file);
             var fout = fs.createWriteStream(sm);
-
             fin.pipe(fout);
-        } catch (e) {
+        }
+        catch (e) {
             logger.error('<' + file + '> file not found');
         }
     }
-
     function moveTmp(tmpFiles) {
         tmpFiles.forEach(function (itm) {
             fs.rename(itm, itm.substr(0, itm.length - '.tmp'.length), function (err) {
@@ -1303,31 +1202,24 @@ var Webkool;
             });
         });
     }
-
     function run() {
         logger = new Logger(process.stdout);
         doParseArguments(options);
         pr = new PathRes(options.output);
         simApp = new Router();
-
         options.includes.push(pr.getRoot());
         var entryFile = pr.resolveCheck(options.inputs.shift(), options.includes);
         var webkoolFile = pr.resolve(pr.getCurrentFolder(), 'webkool.wk');
-
         checkWebKoolWkFileExistence(webkoolFile);
         generateSourceMapFolder(options.output);
-
         //begin the parsing of webkool.wk
         doParseDocument(webkoolFile, function (initialBuffers) {
             var _buffers = initialBuffers;
-
             //parse the entry point (index.wk for example)
             doParseDocument(entryFile, function (buffers) {
                 _buffers.merge(0 /* BOTH */, buffers, 0);
-
                 //process some operation over buffer
                 joinBuffers(0 /* BOTH */, _buffers);
-
                 //write in file
                 async.waterfall([
                     function (callback) {
@@ -1346,5 +1238,4 @@ var Webkool;
     }
     Webkool.run = run;
 })(Webkool || (Webkool = {}));
-
 Webkool.run();

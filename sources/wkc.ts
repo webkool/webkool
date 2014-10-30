@@ -529,14 +529,27 @@ module Webkool {
 	class Router {
 		client;
 		server;
+		both;
 
 		constructor() {
+			this.both = {};
 			this.client = {};
 			this.server = {};
 		}
 
 		addHandler(side, method, url, file, line, column) {
-			var sideHandler = side == SideType.CLIENT ? this.client : this.server;
+			var sideHandler;
+			switch (side) {
+				case SideType.CLIENT:
+					sideHandler = this.client;
+				break;
+				case SideType.SERVER:
+					sideHandler = this.server;
+				break;
+				default:
+					sideHandler = this.both;
+				break
+			}
 			if (!sideHandler.hasOwnProperty(url))
 				sideHandler[url] = {};
 			if (sideHandler[url].hasOwnProperty(method)) {
@@ -546,6 +559,18 @@ module Webkool {
 
 				logger.warning(filename, line, column, 'handler "' + url + '"');
 				logger.warning(filenamePrev, info.line, info.column, 'previously defined here.');
+			}
+			if (sideHandler != this.both) {
+				if (!this.both.hasOwnProperty(url))
+					this.both[url] = {};
+				if (this.both[url].hasOwnProperty(method)) {
+					var info = this.both[url][method];
+					var filename = pr.resolveCheck(file, options.includes);
+					var filenamePrev = pr.resolveCheck(info.file, options.includes);
+
+					logger.warning(filename, line, column, 'handler "' + url + '"');
+					logger.warning(filenamePrev, info.line, info.column, 'previously defined here.');
+				}
 			}
 			sideHandler[url][method] = {
 				file:	file,
