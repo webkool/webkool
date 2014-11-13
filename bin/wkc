@@ -32,7 +32,7 @@ var Webkool;
     /*
     ** Template and Css Engine
     */
-    var version = '0.4.3'; //current version
+    var version = '0.5.0'; //current version
     var templateEngine = {
         'square': require('../lib/square'),
         'mustache': require('../lib/mustache') //internal mustache(hogan.js) templating module

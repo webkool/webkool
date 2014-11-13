@@ -116,3 +116,6 @@ open-source platform to develop client and/or server web application.
 
 -	adding PUT method to ApiRequest
 
+**0.5.0**:
+
+- entire rewriting
