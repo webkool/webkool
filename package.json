@@ -36,7 +36,7 @@
     "source-map-support": "*",
     "jshint": "*",
     "source-map": "*",
-    "less": "*",
+    "less": "<2.0.0",
     "async": "*",
     "hogan.js": "*",
     "mysql": "*",
