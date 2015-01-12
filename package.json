@@ -40,7 +40,7 @@
     "async": "*",
     "hogan.js": "*",
     "mysql": "*",
-    "node-sass": "*",
+    "node-sass": "<2.0.0",
     "formidable": "*",
     "node-expat": "*",
     "optimist": "*",
