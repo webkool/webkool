@@ -121,9 +121,12 @@ var Webkool;
     var Logger = (function () {
         function Logger(outputStream) {
             this.stream = outputStream;
+            this.errorCount = 0;
+            this.warningCount = 0;
         }
         Logger.prototype.error = function (file, line, column, message) {
             var msg;
+            this.errorCount++;
             if (typeof line === 'undefined' && typeof column === 'undefined' && typeof message === 'undefined')
                 msg = '# ERROR in file ' + file + '\n';
             else {
@@ -138,6 +141,7 @@ var Webkool;
         };
         Logger.prototype.warning = function (file, line, column, message) {
             var msg = '# ' + 'WARNING in file ' + file + ':' + line + ':' + column + ': ' + message + '\n';
+            this.warningCount++;
             if (options.color) {
                 terminal.color('green').write(msg).reset();
             }
@@ -1035,6 +1039,7 @@ var Webkool;
         };
         parser.addListener('error', function (e) {
             logger.error(parser.filename, parser.getCurrentLineNumber(), 0, e);
+            process.exit(1);
         });
         parser.addListener('startElement', function (name, attrs) {
             this.currentElement.processElement(parser, name, attrs, filename);
@@ -1228,10 +1233,15 @@ var Webkool;
                         callback(null, tmpFiles);
                     },
                     function (tmpFiles, callback) {
-                        if (tmpFiles != null)
+                        if (tmpFiles != null) {
                             moveTmp(tmpFiles[0].concat(tmpFiles[1]));
+                        }
+                        else {
+                            logger.info('Too many error: ' + logger.errorCount);
+                            process.exit(1);
+                        }
                         callback(null);
-                    }
+                    },
                 ]);
             });
         });

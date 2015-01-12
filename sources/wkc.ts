@@ -145,14 +145,18 @@ module Webkool {
 
 	class	Logger {
 		stream;
+		errorCount;
+		warningCount;
 
 		constructor(outputStream) {
 			this.stream = outputStream;
+			this.errorCount = 0;
+			this.warningCount = 0;
 		}
 
 		error(file, line, column, message) {
 			var msg;
-
+			this.errorCount++;
 			if (typeof line === 'undefined' && typeof column === 'undefined' && typeof message === 'undefined')
 				msg = '# ERROR in file ' + file + '\n';
 			else {
@@ -168,6 +172,7 @@ module Webkool {
 
 		warning(file, line, column, message) {
 			var msg = '# ' + 'WARNING in file ' + file + ':' + line + ':' + column + ': ' + message + '\n';
+			this.warningCount++;
 			if (options.color) {
 				terminal.color('green').write(msg).reset();
 			}
@@ -1231,6 +1236,7 @@ module Webkool {
 		}
 		parser.addListener('error', function(e) {
 			logger.error(parser.filename, parser.getCurrentLineNumber(), 0, e);
+			process.exit(1);
 		});
 		parser.addListener('startElement', function(name, attrs) {
 			this.currentElement.processElement(parser, name, attrs, filename);
@@ -1458,12 +1464,17 @@ module Webkool {
 						var tmpFiles = createFilesForSide(side, _buffers, pr.getOutputName(side), pr.getSourceMapName(side));
 						callback(null, tmpFiles);
 					},
-				    function(tmpFiles, callback){
-				    	if (tmpFiles != null)
-					    	moveTmp(tmpFiles[0].concat(tmpFiles[1]));
-				        callback(null);
-				    }
-				]);
+			    function(tmpFiles, callback){
+						if (tmpFiles != null) {
+							moveTmp(tmpFiles[0].concat(tmpFiles[1]));
+						}
+						else {
+							logger.info('Too many error: ' + logger.errorCount);
+							process.exit(1);
+						}
+			      callback(null);
+			    },
+					]);
 			});
 		});
 	}
