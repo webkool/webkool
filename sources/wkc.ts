@@ -4,6 +4,7 @@
 */
 
 
+declare var VERSION;
 declare var Buffer;
 declare var process;
 declare var require;
@@ -41,10 +42,10 @@ module Webkool {
 	** Template and Css Engine
 	*/
 
-	var version = '0.5.0'; 						//current version
+	var version = VERSION || '0.0.1'; 				//current version
 
 	var templateEngine = {
-		'square':	require('../lib/square'), 	//internal square templating module
+		'square':	require('../lib/square'), 		//internal square templating module
 		'mustache':	require('../lib/mustache') 	//internal mustache(hogan.js) templating module
 	};
 

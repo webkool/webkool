@@ -1,10 +1,11 @@
 #!/bin/bash
-########################################################
-#        			Package Builder 				   #
-#													   #
-########################################################
+
+VERSION=`tr -d '\n' < VERSION`
 
 COMPILER_TMP='./sources/tmp/'
+
+sed 's/"version": ".*"/"version": "'${VERSION}'"/' package.json > package.tmp.json
+mv package.tmp.json package.json
 
 #compiler name
 BIN_INP_DIR='./sources/'
@@ -15,7 +16,8 @@ BIN='wkc'
 #-----------------------------------------------------------------------------------------
 		echo '[0] compiling wkc.ts'
 		tsc --target ES5 --outDir ${COMPILER_TMP} 	${BIN_INP_DIR}${BIN}'.ts'
-		echo '#! /usr/bin/env node' 				> ${BIN_OUT_DIR}${BIN}
+		echo '#! /usr/bin/env node' > ${BIN_OUT_DIR}${BIN}
+		echo 'var VERSION = "'${VERSION}'";' >> ${BIN_OUT_DIR}${BIN}
 		tr -d '\r' < ${COMPILER_TMP}${BIN}'.js' 	>> ${BIN_OUT_DIR}${BIN}
 		chmod +x 									${BIN_OUT_DIR}${BIN}
 #-----------------------------------------------------------------------------------------
@@ -70,4 +72,3 @@ SOURCES_CLIENT_JS[1]='hogan-2.0.0'
 			echo -e '\tmoving '${SOURCES_CLIENT_JS_INP_DIR}${ELM}'.js'
 		done
 #-----------------------------------------------------------------------------------------
-
