@@ -1,4 +1,4 @@
-# Webkool
+Je# Webkool
 ***
 open-source platform to develop client and/or server web application.
 
@@ -126,3 +126,8 @@ open-source platform to develop client and/or server web application.
 - Removing extra space
 - doRequest is overridable
 - mixing on_contruct and doPrepare to factorize sqlHandler.
+
+**0.5.2**:
+
+- adding WebSQL.js support for sqlLite
+
