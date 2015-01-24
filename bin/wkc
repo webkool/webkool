@@ -1,4 +1,5 @@
 #! /usr/bin/env node
+var VERSION = "0.5.1";
 /*
     Webkool parser
 
@@ -32,7 +33,7 @@ var Webkool;
     /*
     ** Template and Css Engine
     */
-    var version = '0.5.0'; //current version
+    var version = VERSION || '0.0.1'; //current version
     var templateEngine = {
         'square': require('../lib/square'),
         'mustache': require('../lib/mustache') //internal mustache(hogan.js) templating module

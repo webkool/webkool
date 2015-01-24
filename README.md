@@ -95,7 +95,7 @@ open-source platform to develop client and/or server web application.
 
 **0.4.0**:
 
-- 	handler for a specific method
+- handler for a specific method
 -	handler with dynamic url
 -	add warning on the std ouput
 -	fix include output error
@@ -119,3 +119,10 @@ open-source platform to develop client and/or server web application.
 **0.5.0**:
 
 - entire rewriting
+
+**0.5.1**:
+
+- Version automation
+- Removing extra space
+- doRequest is overridable
+- mixing on_contruct and doPrepare to factorize sqlHandler.
