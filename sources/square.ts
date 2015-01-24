@@ -53,11 +53,14 @@ module Square {
 
 		print(stream, carriageReturn) {
 			var text = this.buffer;
-			text = text.replace('\n', ' ');
+			text = text.replace(/\\n/g, '');
+			text = text.replace(/\\t/g, '');
 			text = text.replace(/\s+/g, ' ');
-			stream.write('result += \"')
-			stream.write(text);
-			stream.write('\";');
+			if (text) {
+				stream.write('result += \"')
+				stream.write(text);
+				stream.write('\";');
+			}
 		}
 	}
 
