@@ -1,4 +1,4 @@
-Je# Webkool
+# Webkool
 ***
 open-source platform to develop client and/or server web application.
 
@@ -19,106 +19,9 @@ open-source platform to develop client and/or server web application.
 -   **--hint**		jshint config file
 
 
-**0.1.0**:
+**0.5.2**:
 
--   initial commit
-
-**0.1.1**:
-
--   add './' and s'../lib/client' to the default include path
-
-**0.1.2**:
-
--	update command line parser. now, webkool use 'optimist' module
-
-**0.1.3**:
-
--	fix output filename for the -o option
--	auto include .webkool.wk file in main file
--	auto create .webkool.wk if it doesn’t exist
-
-**0.1.4**:
-
--	ajax request (apiRequest)
--	improved one pass compilation
-- 	jshint code fix
-
-**0.1.5**:
-
--	improved one pass compilation and bug fixing
-- 	source map support
-
-**0.1.6**:
-
--	jshint debug support during compilation process
--	fix problem with line/column in source-map
-
-**0.1.7**:
-
--	add a config file for jshint (with option --hint )
-- 	add a source-map comment at the end of generated files
-- 	error handling on request
-
-**0.2.0**:
-
--	source map support for node server and node-inspector
--	source map support for client
-- 	jshint code validation
-- 	patch for stylesheet attribute, relative path, -o and --hint options
-
-**0.2.1**:
-
--	source-map path fix
-
-**0.2.2**:
-
--	output name fix
-
-**0.3.0**:
-
--	<include> is now only for .wk
--	config file is now webkool.wk
--	options -i and -o fix
--	debug output fix
-
-**0.3.1**:
-
--	fix relative path in source-map file
-
-**0.3.2**:
-
--	fix file saving step
-
-**0.3.3**:
-
-- 	dynamic route
-
-**0.4.0**:
-
-- handler for a specific method
--	handler with dynamic url
--	add warning on the std ouput
--	fix include output error
-
-**0.4.1**:
-
--	fix error syntax
--	error and warning color
--	fix exports for client side
--	fix method already declared between client and server
-
-**0.4.2**:
-
--	fixing sourcemap path
--	better error reporting
-
-**0.4.3**:
-
--	adding PUT method to ApiRequest
-
-**0.5.0**:
-
-- entire rewriting
+- adding WebSQL.js support for sqlLite
 
 **0.5.1**:
 
@@ -127,7 +30,103 @@ open-source platform to develop client and/or server web application.
 - doRequest is overridable
 - mixing on_contruct and doPrepare to factorize sqlHandler.
 
-**0.5.2**:
+**0.5.0**:
 
-- adding WebSQL.js support for sqlLite
+- entire rewriting
 
+**0.4.3**:
+
+-	adding PUT method to ApiRequest
+
+**0.4.2**:
+
+-	fixing sourcemap path
+-	better error reporting
+
+**0.4.1**:
+
+-	fix error syntax
+-	error and warning color
+-	fix exports for client side
+-	fix method already declared between client and server
+
+**0.4.0**:
+
+- handler for a specific method
+-	handler with dynamic url
+-	add warning on the std ouput
+-	fix include output error
+
+**0.3.3**:
+
+- 	dynamic route
+
+**0.3.2**:
+
+-	fix file saving step
+
+**0.3.1**:
+
+-	fix relative path in source-map file
+
+**0.3.0**:
+
+-	<include> is now only for .wk
+-	config file is now webkool.wk
+-	options -i and -o fix
+-	debug output fix
+
+**0.2.2**:
+
+-	output name fix
+
+**0.2.1**:
+
+-	source-map path fix
+
+**0.2.0**:
+
+-	source map support for node server and node-inspector
+-	source map support for client
+- 	jshint code validation
+- 	patch for stylesheet attribute, relative path, -o and --hint options
+
+**0.1.7**:
+
+-	add a config file for jshint (with option --hint )
+- 	add a source-map comment at the end of generated files
+- 	error handling on request
+
+**0.1.6**:
+
+-	jshint debug support during compilation process
+-	fix problem with line/column in source-map
+
+**0.1.5**:
+
+-	improved one pass compilation and bug fixing
+- 	source map support
+
+**0.1.4**:
+
+-	ajax request (apiRequest)
+-	improved one pass compilation
+- 	jshint code fix
+
+**0.1.3**:
+
+-	fix output filename for the -o option
+-	auto include .webkool.wk file in main file
+-	auto create .webkool.wk if it doesn’t exist
+
+**0.1.2**:
+
+-	update command line parser. now, webkool use 'optimist' module
+
+**0.1.1**:
+
+-   add './' and s'../lib/client' to the default include path
+
+**0.1.0**:
+
+-   initial commit
