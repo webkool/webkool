@@ -7,9 +7,8 @@
 			/*jshint +W079 */
 		</script>
 		<script href='webkool.js'></script>
-		<script href='hogan-2.0.0.js'></script>
 		<script>
-			var application = new Application();
+			var application = new Client();
 		</script>
 	</client>
 	<server>
