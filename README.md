@@ -18,6 +18,10 @@ open-source platform to develop client and/or server web application.
 -   **-o**		output basename
 -   **--hint**		jshint config file
 
+**0.5.4**:
+- fixing default for client side
+- default port is 8080
+- setting scope to {} when null for rendering
 
 **0.5.2**:
 
